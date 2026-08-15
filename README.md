@@ -131,3 +131,11 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：Supabase Auth、Postgres 17、PostgREST、RLS、PL/pgSQL、Supabase CLI、Vitest、GitHub Actions。
 - 新增或修改檔案：新增 `supabase/config.toml`、Phase 2 migrations、資料庫整合測試、測試與管理員命令、Supabase 運維手冊；更新 package 工具鏈、CI 與 README。
 - 後續建議：取得 Google OAuth Client ID/Secret 後啟用兩個遠端 Provider；管理員先完成一次產品登入，再執行受控 bootstrap 命令；Phase 3 以 Pages Functions 驗證 JWT 後呼叫 service-role-only 配額 RPC。
+
+### 2026-08-15：加入首頁 Plausible 統計
+- 會話主要目的：在網站首頁接入 `watermarklens.com` 的 Plausible 統計腳本並發布更新。
+- 完成的主要任務：將 ShipSolo Plausible `defer` 腳本加入首頁 `<head>`，並驗證建置產物包含正確的統計域名與腳本來源。
+- 關鍵決策和解決方案：只修改首頁，不把統計腳本擴展到文章、工具或法律頁面；保持腳本非同步延後載入。
+- 使用的技術棧：原生 HTML、Plausible Analytics、Cloudflare Pages。
+- 新增或修改檔案：修改 `index.html` 與本 README，未新增或提交任何密鑰或 `.env` 文件。
+- 後續建議：部署後在 Plausible 即時面板確認首頁 pageview 到達，並依私隱政策決定是否調整 Cookie 文案。
