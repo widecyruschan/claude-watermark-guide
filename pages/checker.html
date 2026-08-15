@@ -25,7 +25,7 @@
       <h3>Paste text to check</h3>
       <textarea id="input" placeholder="Paste the text you want to check (max 20000 characters)…"></textarea>
       <p style="margin-top:12px"><button class="btn" id="checkBtn">Check my text</button></p>
-      <div id="result" class="result" style="display:none"></div>
+      <div id="result" class="result" aria-live="polite" hidden></div>
       <p class="disclaimer">This is a transparent, client-side heuristic. It is <strong>not</strong> an official Anthropic tool and does <strong>not</strong> guarantee detection accuracy. It cannot remove or bypass any watermark. Results are indicative only.</p>
     </div>
   </main>

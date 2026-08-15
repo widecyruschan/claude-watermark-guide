@@ -55,6 +55,7 @@
       ? "<ul>" + res.signals.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ul>"
       : "<p>No transparent heuristic signals detected in this text.</p>";
     box.className = "result " + cls;
+    box.hidden = false;
     box.innerHTML =
       "<strong>" + label + "</strong> (confidence " + res.confidence.toFixed(2) + ")" +
       sig +
@@ -67,11 +68,13 @@
     var text = ta.value;
     if (!text.trim()) {
       box.className = "result error";
+      box.hidden = false;
       box.textContent = "EMPTY_TEXT: please paste some text to check.";
       return;
     }
     if (text.length > 20000) {
       box.className = "result error";
+      box.hidden = false;
       box.textContent = "TOO_LONG: text exceeds 20000 character limit.";
       return;
     }
@@ -79,6 +82,7 @@
       render(analyze(text));
     } catch (e) {
       box.className = "result error";
+      box.hidden = false;
       box.textContent = "COMPUTE_FAILED: local check failed, please retry.";
     }
   }
