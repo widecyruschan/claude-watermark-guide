@@ -1,0 +1,145 @@
+/* ============================================================
+   Design System Token — from design-claude-watermark.md 3.2
+   Style: Technical-doc (NOT generic AI SaaS)
+   ============================================================ */
+:root {
+  --bg: #FFFFFF;
+  --surface: #F7F8FA;
+  --text: #1A1D21;
+  --text-muted: #5B6470;
+  --accent: #2B6CB0;       /* single blue, no purple gradient */
+  --border: #E3E6EA;
+  --warn: #B7791F;
+  --font-head: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-body: "Source Serif 4", Georgia, serif;
+  --radius: 4px;
+  --grid: 4px;
+  --maxw: 1100px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-head);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.55;
+  font-size: 16px;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Layout */
+.container { max-width: var(--maxw); margin: 0 auto; padding: 0 16px; }
+.site-header {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+}
+.site-header .container { display: flex; align-items: center; justify-content: space-between; }
+.brand { font-weight: 600; font-size: 18px; }
+.nav a { margin-left: 16px; color: var(--text-muted); font-size: 14px; }
+.nav a:hover { color: var(--text); }
+
+footer {
+  border-top: 1px solid var(--border);
+  margin-top: 64px;
+  padding: 24px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+footer .container { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* Hero — left aligned, NO centered hero + 3 cards */
+.hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 32px;
+  align-items: start;
+  padding: 48px 0 32px;
+}
+.hero h1 { font-size: 32px; line-height: 1.2; margin: 0 0 12px; }
+.hero .subhead { font-size: 18px; color: var(--text-muted); margin: 0 0 20px; }
+.hero .benefits { list-style: none; padding: 0; margin: 0; }
+.hero .benefits li {
+  padding: 8px 0 8px 24px;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.hero .benefits li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
+
+/* Tool card (right side of hero) */
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.tool-card h3 { margin: 0 0 8px; font-size: 16px; }
+.tool-card textarea {
+  width: 100%; min-height: 120px;
+  font-family: var(--font-mono); font-size: 13px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px; resize: vertical;
+}
+.btn {
+  display: inline-block; background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius);
+  padding: 10px 18px; font-size: 15px; cursor: pointer; font-family: var(--font-head);
+}
+.btn:hover { opacity: .92; text-decoration: none; }
+
+/* Nav cards (not decorative — real H2 + summary) */
+.nav-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0 48px; }
+.nav-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; background: var(--surface);
+}
+.nav-card h3 { margin: 0 0 6px; font-size: 16px; }
+.nav-card p { margin: 0; color: var(--text-muted); font-size: 14px; }
+
+/* Tool page result states */
+.result { margin-top: 16px; padding: 12px; border-radius: var(--radius); font-size: 14px; }
+.result.likely { background: #F0F4FF; border: 1px solid var(--accent); }
+.result.not { background: var(--surface); border: 1px solid var(--border); }
+.result.uncertain { background: #FFF8EB; border: 1px solid var(--warn); }
+.disclaimer { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+.error { color: #C53030; }
+
+/* Article page */
+.article-layout { display: grid; grid-template-columns: 240px 720px; gap: 32px; padding: 32px 0; }
+.toc { font-size: 14px; position: sticky; top: 16px; align-self: start; }
+.toc a { display: block; padding: 4px 0; color: var(--text-muted); }
+.toc a:hover { color: var(--text); }
+.article h1 { font-size: 28px; }
+.article h2 { font-size: 21px; margin-top: 32px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.article p, .article li { font-family: var(--font-body); font-size: 17px; }
+.article table { width: 100%; border-collapse: collapse; margin: 16px 0; font-family: var(--font-head); font-size: 15px; }
+.article th, .article td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+.article code, .article pre { font-family: var(--font-mono); background: var(--surface); padding: 2px 4px; border-radius: var(--radius); }
+.faq details { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin: 8px 0; }
+.faq summary { cursor: pointer; font-weight: 600; }
+
+/* Legal page */
+.legal { max-width: 720px; margin: 32px auto; padding: 0 16px; }
+.legal h1 { font-size: 26px; }
+.legal h2 { font-size: 19px; margin-top: 24px; }
+
+/* Cookie banner (compliance P1) */
+.cookie-banner {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--text); color: #fff; padding: 12px 16px;
+  font-size: 14px; display: flex; gap: 16px; align-items: center; justify-content: center;
+}
+.cookie-banner button { background: #fff; color: var(--text); border: none; border-radius: var(--radius); padding: 6px 14px; cursor: pointer; }
+
+/* Responsive — mobile */
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; }
+  .nav-cards { grid-template-columns: 1fr; }
+  .article-layout { grid-template-columns: 1fr; }
+  .toc { position: static; }
+  .hero h1 { font-size: 26px; }
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude Watermark Self-Check (Free, Client-Side)</title>
+  <meta name="description" content="Free client-side heuristic self-check for Claude's invisible text watermark. Your text stays in your browser—never uploaded." />
+  <link rel="canonical" href="/checker" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <span class="brand">Claude Watermark Guide</span>
+      <nav class="nav"><a href="/">Home</a><a href="/what-is-claude-watermark">What Is</a><a href="/how-it-works">How It Works</a><a href="/changes-2026">What Changed</a></nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top:32px">
+    <h1>Claude Watermark Self-Check (Free, Client-Side)</h1>
+    <p class="subhead" style="color:var(--text-muted)">Your text is processed in your browser only. It is never uploaded to any server.</p>
+
+    <div class="tool-card" style="max-width:720px">
+      <h3>Paste text to check</h3>
+      <textarea id="input" placeholder="Paste the text you want to check (max 20000 characters)…"></textarea>
+      <p style="margin-top:12px"><button class="btn" id="checkBtn">Check my text</button></p>
+      <div id="result" class="result" style="display:none"></div>
+      <p class="disclaimer">This is a transparent, client-side heuristic. It is <strong>not</strong> an official Anthropic tool and does <strong>not</strong> guarantee detection accuracy. It cannot remove or bypass any watermark. Results are indicative only.</p>
+    </div>
+  </main>
+
+  <footer><div class="container"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/cookie">Cookie</a><a href="/contact">Contact</a></div></footer>
+  <script src="/js/checker.js"></script>
+</body>
+</html>

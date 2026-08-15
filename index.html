@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude's Invisible Text Watermark: What It Is, How It Works, and What Changed</title>
+  <meta name="description" content="A plain-English explainer plus a free client-side self-check tool for Claude's invisible text watermark—no upload, no account." />
+  <link rel="canonical" href="/" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- fonts: IBM Plex (NOT Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <span class="brand">Claude Watermark Guide</span>
+      <nav class="nav">
+        <a href="/what-is-claude-watermark">What Is</a>
+        <a href="/how-it-works">How It Works</a>
+        <a href="/changes-2026">What Changed</a>
+        <a href="/checker">Free Checker</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h1>Claude's Invisible Text Watermark: What It Is, How It Works, and What Changed</h1>
+        <p class="subhead">A plain-English explainer plus a free client-side self-check tool—no upload, no account.</p>
+        <ul class="benefits">
+          <li>Know in 30 seconds whether your Claude text carries the invisible marker.</li>
+          <li>Compare what changed before vs. after the latest update.</li>
+          <li>Understand the mechanism without reading Anthropic's docs end-to-end.</li>
+        </ul>
+        <p style="margin-top:20px"><a class="btn" href="/what-is-claude-watermark">Read the guide</a></p>
+      </div>
+      <aside class="tool-card">
+        <h3>Free Self-Check</h3>
+        <p style="font-size:14px;color:var(--text-muted)">Runs in your browser. Text is never uploaded.</p>
+        <a class="btn" href="/checker">Check my text</a>
+      </aside>
+    </section>
+
+    <section class="nav-cards">
+      <div class="nav-card">
+        <h3>What Is Claude's Watermark</h3>
+        <p>Definition, why it exists, how it differs from detectors, common misconceptions.</p>
+        <a href="/what-is-claude-watermark">Read →</a>
+      </div>
+      <div class="nav-card">
+        <h3>What Changed Recently</h3>
+        <p>Timeline, before vs. after, community and media coverage.</p>
+        <a href="/changes-2026">Read →</a>
+      </div>
+      <div class="nav-card">
+        <h3>Try the Free Checker</h3>
+        <p>Client-side heuristic self-check. No sign-up, no upload.</p>
+        <a href="/checker">Open tool →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/cookie">Cookie</a>
+      <a href="/contact">Contact</a>
+    </div>
+  </footer>
+
+  <div class="cookie-banner" id="cookieBanner" hidden>
+    <span>We use analytics cookies. See our <a href="/cookie" style="color:#fff;text-decoration:underline">Cookie</a> page.</span>
+    <button onclick="document.getElementById('cookieBanner').hidden=true">Accept</button>
+  </div>
+
+  <script>
+    if (!localStorage.getItem("cookie_ok")) {
+      document.getElementById("cookieBanner").hidden = false;
+    }
+  </script>
+</body>
+</html>
