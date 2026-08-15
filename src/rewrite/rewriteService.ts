@@ -144,6 +144,8 @@ export async function executeRewrite(
       durationMs: Math.max(0, Date.now() - startedAt),
       errorCode: providerError.code,
       event: 'rewrite_provider_failed',
+      providerDiagnosticModelAvailable: providerError.diagnosticModelAvailable,
+      providerDiagnosticStatusCode: providerError.diagnosticStatusCode,
       providerStatusCode: providerError.statusCode,
       providerTransportFailure: providerError.transportFailureKind,
       requestId: input.requestId,
@@ -242,6 +244,8 @@ interface RewriteLogFields {
   model?: string;
   outputTokens?: number;
   promptVersion?: string;
+  providerDiagnosticModelAvailable?: boolean;
+  providerDiagnosticStatusCode?: number;
   providerStatusCode?: number;
   providerTransportFailure?: 'invalid_header' | 'network' | 'other';
   requestId: string;

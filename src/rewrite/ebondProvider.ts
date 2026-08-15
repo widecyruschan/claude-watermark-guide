@@ -51,6 +51,10 @@ const chatCompletionsPayloadSchema = z
   })
   .passthrough();
 
+const modelsPayloadSchema = z.object({
+  data: z.array(z.object({ id: z.string() })),
+});
+
 export type EbondApiMode = 'chat_completions' | 'responses';
 
 export type EbondProviderErrorCode =
@@ -69,6 +73,8 @@ export class EbondProviderError extends Error {
     readonly code: EbondProviderErrorCode,
     readonly statusCode?: number,
     readonly transportFailureKind?: EbondTransportFailureKind,
+    readonly diagnosticStatusCode?: number,
+    readonly diagnosticModelAvailable?: boolean,
   ) {
     super(code);
     this.name = 'EbondProviderError';
@@ -79,6 +85,7 @@ interface EbondProviderOptions {
   apiKey: string;
   apiMode?: EbondApiMode;
   baseUrl: string;
+  enableConnectivityProbe?: boolean;
   fetch?: typeof fetch;
   model: string;
   retryDelayMs?: number;
@@ -89,6 +96,7 @@ export class EbondProvider {
   private readonly apiKey: string;
   private readonly apiMode: EbondApiMode;
   private readonly baseUrl: string;
+  private readonly enableConnectivityProbe: boolean;
   private readonly fetchImplementation: typeof fetch;
   private readonly model: string;
   private readonly retryDelayMs: number;
@@ -103,6 +111,7 @@ export class EbondProvider {
 
     this.apiMode = options.apiMode ?? 'responses';
     this.baseUrl = options.baseUrl.replace(/\/+$/u, '');
+    this.enableConnectivityProbe = options.enableConnectivityProbe ?? false;
     this.fetchImplementation = options.fetch ?? fetch;
     this.model = options.model;
     this.retryDelayMs = options.retryDelayMs ?? 250;
@@ -198,14 +207,48 @@ export class EbondProvider {
         throw new EbondProviderError('PROVIDER_TIMEOUT');
       }
 
+      const diagnostic = this.enableConnectivityProbe
+        ? await this.probeProviderAccess()
+        : undefined;
+
       throw new EbondProviderError(
         'PROVIDER_UNAVAILABLE',
         undefined,
         classifyTransportFailure(error),
+        diagnostic?.statusCode,
+        diagnostic?.modelAvailable,
       );
     } finally {
       clearTimeout(timeout);
       cancellationSignal?.removeEventListener('abort', cancelRequest);
+    }
+  }
+
+  private async probeProviderAccess(): Promise<{
+    modelAvailable?: boolean;
+    statusCode?: number;
+  }> {
+    try {
+      const response = await this.fetchImplementation(`${this.baseUrl}/v1/models`, {
+        headers: { authorization: `Bearer ${this.apiKey}` },
+        signal: AbortSignal.timeout(Math.min(this.timeoutMs, 5_000)),
+      });
+
+      if (!response.ok) {
+        return { statusCode: response.status };
+      }
+
+      const payload = await response.json().catch(() => null);
+      const parsedPayload = modelsPayloadSchema.safeParse(payload);
+
+      return {
+        modelAvailable: parsedPayload.success
+          ? parsedPayload.data.data.some((model) => model.id === this.model)
+          : undefined,
+        statusCode: response.status,
+      };
+    } catch {
+      return {};
     }
   }
 

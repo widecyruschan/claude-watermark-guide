@@ -301,6 +301,7 @@ function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
       apiKey: bindings.EBOND_API_KEY,
       apiMode: bindings.EBOND_API_MODE === 'chat_completions' ? 'chat_completions' : 'responses',
       baseUrl: bindings.EBOND_BASE_URL,
+      enableConnectivityProbe: true,
       model: bindings.EBOND_MODEL,
     }),
     repository: supabaseGateway,
