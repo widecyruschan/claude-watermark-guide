@@ -30,6 +30,8 @@ EBOND_API_KEY
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
+啟動 Provider 前會驗證 `EBOND_API_KEY` 只包含可安全放入 HTTP Header 的可打印 ASCII 字元。格式錯誤只回傳 `PROVIDER_CONFIGURATION_ERROR`，不會記錄或回傳 Secret 值。
+
 `responses` 是預設協議。只有完成真實相容性測試並證明 Responses 不可用或缺少完整 usage 時，才可將 `EBOND_API_MODE` 明確改為 `chat_completions`。每個請求只使用一種協議，避免雙重供應商計費。
 
 ## 配額與冪等

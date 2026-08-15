@@ -55,6 +55,7 @@ export type EbondApiMode = 'chat_completions' | 'responses';
 
 export type EbondProviderErrorCode =
   | 'PROVIDER_CANCELLED'
+  | 'PROVIDER_CONFIGURATION_ERROR'
   | 'PROVIDER_INVALID_RESPONSE'
   | 'PROVIDER_RATE_LIMITED'
   | 'PROVIDER_REJECTED'
@@ -95,6 +96,11 @@ export class EbondProvider {
 
   constructor(options: EbondProviderOptions) {
     this.apiKey = options.apiKey.trim();
+
+    if (!/^[\x21-\x7e]+$/u.test(this.apiKey)) {
+      throw new EbondProviderError('PROVIDER_CONFIGURATION_ERROR');
+    }
+
     this.apiMode = options.apiMode ?? 'responses';
     this.baseUrl = options.baseUrl.replace(/\/+$/u, '');
     this.fetchImplementation = options.fetch ?? fetch;

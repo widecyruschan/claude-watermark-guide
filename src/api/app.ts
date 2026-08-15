@@ -49,6 +49,7 @@ export const API_ERROR_CODE = {
   notFound: 'NOT_FOUND',
   payloadTooLarge: 'PAYLOAD_TOO_LARGE',
   providerCancelled: 'PROVIDER_CANCELLED',
+  providerConfigurationError: 'PROVIDER_CONFIGURATION_ERROR',
   providerInvalidResponse: 'PROVIDER_INVALID_RESPONSE',
   providerRateLimited: 'PROVIDER_RATE_LIMITED',
   providerRejected: 'PROVIDER_REJECTED',
@@ -359,6 +360,11 @@ function mapRewriteError(error: RewriteError | EbondProviderError): ApiError {
       details: 'Submit a new request if a rewrite is still needed.',
       message: 'The rewrite request was cancelled.',
       status: 408,
+    },
+    PROVIDER_CONFIGURATION_ERROR: {
+      details: 'Contact support before retrying the request.',
+      message: 'The rewrite provider is not configured correctly.',
+      status: 503,
     },
     PROVIDER_INVALID_RESPONSE: {
       details: 'Try again later with a new request.',
