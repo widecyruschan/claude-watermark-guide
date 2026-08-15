@@ -44,15 +44,11 @@ function readLocalSupabaseEnvironment() {
 }
 
 const databaseEnvironment = readLocalSupabaseEnvironment();
-const result = spawnSync(
-  process.execPath,
-  [vitestEntry, 'run', 'tests/database/phase2.integration.test.ts'],
-  {
-    cwd: projectRoot,
-    env: { ...process.env, ...databaseEnvironment },
-    stdio: 'inherit',
-  },
-);
+const result = spawnSync(process.execPath, [vitestEntry, 'run', 'tests/database'], {
+  cwd: projectRoot,
+  env: { ...process.env, ...databaseEnvironment },
+  stdio: 'inherit',
+});
 
 if (result.error) {
   throw result.error;

@@ -1,17 +1,32 @@
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { createMiddleware } from 'hono/factory';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
-interface ApiBindings {
+import {
+  REWRITE_MAX_BODY_BYTES,
+  rewriteInputSchema,
+  type RewriteInput,
+} from '../rewrite/contracts';
+import { EbondProvider, EbondProviderError } from '../rewrite/ebondProvider';
+import { executeRewrite, RewriteError, type RewriteRuntime } from '../rewrite/rewriteService';
+import { SupabaseRewriteGateway } from '../rewrite/supabaseRewriteGateway';
+
+export interface ApiBindings {
   EBOND_API_KEY: string;
+  EBOND_API_MODE?: string;
   EBOND_BASE_URL: string;
   EBOND_MODEL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  SUPABASE_URL: string;
 }
 
 interface ApiVariables {
+  authenticatedUserId: string;
   requestId: string;
   requestStartedAt: number;
+  rewriteRuntime: RewriteRuntime;
   validatedBody: unknown;
 }
 
@@ -21,9 +36,26 @@ export interface ApiEnvironment {
 }
 
 export const API_ERROR_CODE = {
+  accountNotInitialized: 'ACCOUNT_NOT_INITIALIZED',
+  accountSuspended: 'ACCOUNT_SUSPENDED',
+  authenticationRequired: 'AUTHENTICATION_REQUIRED',
+  databaseUnavailable: 'DATABASE_UNAVAILABLE',
+  idempotencyAlreadyCompleted: 'IDEMPOTENCY_ALREADY_COMPLETED',
+  idempotencyAlreadyFailed: 'IDEMPOTENCY_ALREADY_FAILED',
+  idempotencyConflict: 'IDEMPOTENCY_CONFLICT',
+  idempotencyInProgress: 'IDEMPOTENCY_IN_PROGRESS',
   internalError: 'INTERNAL_ERROR',
   invalidJson: 'INVALID_JSON',
   notFound: 'NOT_FOUND',
+  payloadTooLarge: 'PAYLOAD_TOO_LARGE',
+  providerCancelled: 'PROVIDER_CANCELLED',
+  providerInvalidResponse: 'PROVIDER_INVALID_RESPONSE',
+  providerRateLimited: 'PROVIDER_RATE_LIMITED',
+  providerRejected: 'PROVIDER_REJECTED',
+  providerTimeout: 'PROVIDER_TIMEOUT',
+  providerUnavailable: 'PROVIDER_UNAVAILABLE',
+  quotaExceeded: 'QUOTA_EXCEEDED',
+  requestLimitExceeded: 'REQUEST_LIMIT_EXCEEDED',
   validationFailed: 'VALIDATION_FAILED',
 } as const;
 
@@ -152,8 +184,13 @@ export function validateJsonBody(schema: ZodType) {
   });
 }
 
-export function createApiApp() {
+interface CreateApiAppOptions {
+  rewriteRuntimeFactory?: (bindings: ApiBindings) => RewriteRuntime;
+}
+
+export function createApiApp(options: CreateApiAppOptions = {}) {
   const app = new Hono<ApiEnvironment>();
+  const rewriteRuntimeFactory = options.rewriteRuntimeFactory ?? createProductionRewriteRuntime;
 
   app.use('*', requestIdMiddleware);
   app.get('/api/v1/health', (context) =>
@@ -161,6 +198,60 @@ export function createApiApp() {
       service: 'claude-watermark-api',
       status: 'ok',
     }),
+  );
+  app.post(
+    '/api/v1/rewrite',
+    bodyLimit({
+      maxSize: REWRITE_MAX_BODY_BYTES,
+      onError: () => {
+        throw new ApiError(
+          413,
+          API_ERROR_CODE.payloadTooLarge,
+          'The request body is too large.',
+          'Reduce the submitted text and try again.',
+        );
+      },
+    }),
+    createMiddleware<ApiEnvironment>(async (context, next) => {
+      const rewriteRuntime = rewriteRuntimeFactory(context.env);
+      const authenticatedUser = await rewriteRuntime.authenticator.authenticate(
+        context.req.header('authorization'),
+      );
+
+      context.set('authenticatedUserId', authenticatedUser.userId);
+      context.set('rewriteRuntime', rewriteRuntime);
+      await next();
+    }),
+    validateJsonBody(rewriteInputSchema),
+    async (context) => {
+      const idempotencyKey = z.uuid().safeParse(context.req.header('idempotency-key'));
+
+      if (!idempotencyKey.success) {
+        throw new ApiError(
+          422,
+          API_ERROR_CODE.validationFailed,
+          'The request payload is invalid.',
+          'Provide a UUID in the Idempotency-Key header.',
+        );
+      }
+
+      const body = context.get('validatedBody') as RewriteInput;
+      const result = await executeRewrite(context.get('rewriteRuntime'), {
+        cancellationSignal: context.req.raw.signal,
+        model: context.env.EBOND_MODEL,
+        requestId: idempotencyKey.data,
+        text: body.text,
+        userId: context.get('authenticatedUserId'),
+      });
+
+      return successResponse(context, 'The text was rewritten.', {
+        text: result.text,
+        usage: {
+          chargedCharacters: result.chargedCharacters,
+          remainingCharacters: result.remainingCharacters,
+        },
+      });
+    },
   );
   app.notFound((context) =>
     errorResponse(
@@ -178,6 +269,10 @@ export function createApiApp() {
       return errorResponse(context, error);
     }
 
+    if (error instanceof RewriteError || error instanceof EbondProviderError) {
+      return errorResponse(context, mapRewriteError(error));
+    }
+
     logUnhandledError(error, context);
     return errorResponse(
       context,
@@ -191,4 +286,117 @@ export function createApiApp() {
   });
 
   return app;
+}
+
+function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
+  const supabaseGateway = new SupabaseRewriteGateway(
+    bindings.SUPABASE_URL,
+    bindings.SUPABASE_SERVICE_ROLE_KEY,
+  );
+
+  return {
+    authenticator: supabaseGateway,
+    provider: new EbondProvider({
+      apiKey: bindings.EBOND_API_KEY,
+      apiMode: bindings.EBOND_API_MODE === 'chat_completions' ? 'chat_completions' : 'responses',
+      baseUrl: bindings.EBOND_BASE_URL,
+      model: bindings.EBOND_MODEL,
+    }),
+    repository: supabaseGateway,
+  };
+}
+
+function mapRewriteError(error: RewriteError | EbondProviderError): ApiError {
+  const errorDefinitions: Record<
+    RewriteError['code'] | EbondProviderError['code'],
+    {
+      details: string;
+      message: string;
+      status: ContentfulStatusCode;
+    }
+  > = {
+    ACCOUNT_NOT_INITIALIZED: {
+      details: 'Sign in again before retrying the request.',
+      message: 'The member account is not ready.',
+      status: 409,
+    },
+    ACCOUNT_SUSPENDED: {
+      details: 'Contact support if you believe this is an error.',
+      message: 'The member account is suspended.',
+      status: 403,
+    },
+    AUTHENTICATION_REQUIRED: {
+      details: 'Sign in and submit the request again.',
+      message: 'Authentication is required.',
+      status: 401,
+    },
+    DATABASE_UNAVAILABLE: {
+      details: 'Try again later with a new request.',
+      message: 'The service is temporarily unavailable.',
+      status: 503,
+    },
+    IDEMPOTENCY_ALREADY_COMPLETED: {
+      details: 'Use a new Idempotency-Key for a new rewrite.',
+      message: 'This request was already completed.',
+      status: 409,
+    },
+    IDEMPOTENCY_ALREADY_FAILED: {
+      details: 'Use a new Idempotency-Key to retry the rewrite.',
+      message: 'This request already failed.',
+      status: 409,
+    },
+    IDEMPOTENCY_CONFLICT: {
+      details: 'Do not reuse an Idempotency-Key with different input.',
+      message: 'The idempotency key conflicts with an earlier request.',
+      status: 409,
+    },
+    IDEMPOTENCY_IN_PROGRESS: {
+      details: 'Wait for the original request to finish.',
+      message: 'This request is already being processed.',
+      status: 409,
+    },
+    PROVIDER_CANCELLED: {
+      details: 'Submit a new request if a rewrite is still needed.',
+      message: 'The rewrite request was cancelled.',
+      status: 408,
+    },
+    PROVIDER_INVALID_RESPONSE: {
+      details: 'Try again later with a new request.',
+      message: 'The rewrite provider returned an invalid response.',
+      status: 502,
+    },
+    PROVIDER_RATE_LIMITED: {
+      details: 'Try again later with a new request.',
+      message: 'The rewrite provider is temporarily busy.',
+      status: 503,
+    },
+    PROVIDER_REJECTED: {
+      details: 'Try again later with a new request.',
+      message: 'The rewrite provider rejected the request.',
+      status: 502,
+    },
+    PROVIDER_TIMEOUT: {
+      details: 'Try again later with a new request.',
+      message: 'The rewrite provider timed out.',
+      status: 504,
+    },
+    PROVIDER_UNAVAILABLE: {
+      details: 'Try again later with a new request.',
+      message: 'The rewrite provider is unavailable.',
+      status: 503,
+    },
+    QUOTA_EXCEEDED: {
+      details: 'Wait for the next usage period or change plans.',
+      message: 'The account quota has been reached.',
+      status: 429,
+    },
+    REQUEST_LIMIT_EXCEEDED: {
+      details: 'Reduce the submitted text and try again.',
+      message: 'The text exceeds the plan request limit.',
+      status: 422,
+    },
+  };
+  const definition = errorDefinitions[error.code];
+
+  return new ApiError(definition.status, error.code, definition.message, definition.details);
 }

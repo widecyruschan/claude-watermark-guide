@@ -10,6 +10,7 @@
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "build": "node scripts/build.mjs",
     "dev": "npm run build && wrangler pages dev dist",
+    "evaluate:rewrite": "node scripts/evaluate-rewrite.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run scan:secrets && npm run test:smoke",
     "format": "prettier --write package.json tsconfig.json eslint.config.js vitest.config.ts functions src tests scripts .github/workflows/deploy.yml",
     "format:check": "prettier --check package.json tsconfig.json eslint.config.js vitest.config.ts functions src tests scripts .github/workflows/deploy.yml",

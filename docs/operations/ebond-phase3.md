@@ -1,0 +1,69 @@
+# EBond Phase 3 運維手冊
+
+## API 合約
+
+`POST /api/v1/rewrite` 只接受以下 JSON：
+
+```json
+{
+  "text": "需要改寫的文字"
+}
+```
+
+請求必須包含有效的 Supabase Bearer JWT 與 UUID 格式的 `Idempotency-Key`。全域上限為 20,000 個 Unicode 字元及 100 KiB 原始 Body；Free 與 Pro 的單次及週期額度仍由資料庫方案定義。
+
+## Cloudflare 綁定
+
+公開變數保存在 `wrangler.toml`：
+
+```text
+EBOND_BASE_URL=https://api.ebondai.com
+EBOND_API_MODE=responses
+EBOND_MODEL=gpt-5.5
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+```
+
+以下值只可使用 Cloudflare Pages production Secret，不得寫入 Git、日誌、`.env` 或 `.dev.vars`：
+
+```text
+EBOND_API_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+`responses` 是預設協議。只有完成真實相容性測試並證明 Responses 不可用或缺少完整 usage 時，才可將 `EBOND_API_MODE` 明確改為 `chat_completions`。每個請求只使用一種協議，避免雙重供應商計費。
+
+## 配額與冪等
+
+`begin_rewrite_request` 在同一交易中取得唯一執行權並預留額度。`complete_rewrite_request` 原子寫入 Token、`cost_microusd` 與成功狀態；`fail_rewrite_request` 原子釋放額度並只保存標準錯誤碼。
+
+同一會員重用相同 Idempotency Key 時：
+
+- `processing`、`succeeded`、`failed` 均不會再次呼叫 EBond。
+- 相同 Key 搭配不同輸入雜湊會回傳衝突。
+- 原文與結果不寫入 `rewrite_requests` 或 `usage_ledger`。
+
+EBond 成本以整數 micro-USD 記錄：
+
+```text
+round(input_tokens * 0.6 + output_tokens * 3.6)
+```
+
+## 失敗與日誌
+
+429、502、503、504 最多短暫重試一次。timeout、取消和無 HTTP 狀態的傳輸失敗不重試。Provider 失敗會釋放額度；Provider 已成功但資料庫結算失敗時保留 reservation，避免錯誤釋放已產生成本的請求。
+
+結構化日誌只包含 request/user ID、模型、Prompt 版本、字元/Token、成本、耗時、HTTP 狀態或標準失敗分類。不得加入輸入、輸出、Authorization、Cookie 或任何 Secret。
+
+## 評測
+
+`tests/fixtures/rewrite-evaluation.json` 包含 20 個非敏感樣本。評測以數字、日期、專名、URL、引用和重要限定詞的事實錨點為自動門檻，至少 95% 樣本必須保留所有錨點。腳本只在記憶體檢查模型輸出，不保存或打印改寫內容：
+
+```bash
+REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
+```
+
+## 2026-08-15 聯調狀態
+
+Supabase development/production 的 claim、settle、release、RLS 與重複 Key 測試均通過。Cloudflare production 已配置兩個加密 Secret。
+
+EBond Responses 與顯式 Chat Completions 均在 Cloudflare 出站子請求階段失敗，沒有取得上游 HTTP 狀態；本機對相同公開主機可取得未授權 HTTP 回應。production 已恢復 `responses`，評測暫未達成，需由 EBond 確認 Cloudflare Workers 出站相容性或提供可用來源地址後重跑。

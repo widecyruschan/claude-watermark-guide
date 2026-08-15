@@ -27,6 +27,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `supabase/`                 本機 Auth 設定、資料庫 schema 與方案 seed migrations
 - `docs/prd/backend-membership-prd.md` 後台、會員、訂閱與管理功能 PRD
 - `docs/operations/supabase-phase2.md` Supabase 環境、Auth、部署與管理員操作手冊
+- `docs/operations/ebond-phase3.md` EBond 重寫 API、冪等、計費與聯調運維手冊
 - `sitemap.xml` / `robots.txt` SEO 索引
 
 ## 待回填（標 [待确认] 項）
@@ -52,6 +53,7 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 ## 工程命令
 - `npm run build`：產生扁平化的 `dist/` 靜態資源
 - `npm run dev`：建置並啟動 Pages 本機執行環境
+- `npm run evaluate:rewrite`：使用短期測試會員 JWT 執行不保存輸出的事實錨點評測
 - `npm run format:check`：檢查新增工程檔案格式
 - `npm run lint`：檢查 TypeScript 與建置腳本
 - `npm run typecheck`：執行 TypeScript 嚴格型別檢查
@@ -139,3 +141,11 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：原生 HTML、Plausible Analytics、Cloudflare Pages。
 - 新增或修改檔案：修改 `index.html` 與本 README，未新增或提交任何密鑰或 `.env` 文件。
 - 後續建議：部署後在 Plausible 即時面板確認首頁 pageview 到達，並依私隱政策決定是否調整 Cookie 文案。
+
+### 2026-08-15：實作 Phase 3 EBond 重寫 API
+- 會話主要目的：建立已認證、可計額、冪等且不保存文字內容的 EBond `gpt-5.5` 重寫 API。
+- 完成的主要任務：實作 Responses 與顯式 Chat Completions 適配器、版本化 Prompt、輸入/Body 限制、Supabase JWT 驗證、原子 claim/settle/fail RPC、Token 成本、timeout/取消/重試、標準錯誤與脫敏日誌；將 migrations 和加密 Secret 配置到 dev/prod 並部署 production。
+- 關鍵決策和解決方案：每個請求只使用一種明確協議，避免自動回退造成雙重計費；同一 Idempotency Key 只有首次 claim 可呼叫 Provider；資料庫只保存輸入雜湊和用量元資料；EBond 費用以整數 micro-USD 計算。
+- 使用的技術棧：Cloudflare Pages Functions、Hono、Zod、Supabase Auth/Postgres/RLS、EBond Responses/Chat Completions、Vitest。
+- 新增或修改檔案：新增 `src/rewrite/` 模組、Phase 3 migration、API/Provider/資料庫測試、20 樣本評測與 `docs/operations/ebond-phase3.md`；更新 API 入口、Wrangler、package scripts 與本 README。
+- 後續建議：EBond 目前從 Cloudflare production 出站時沒有返回 HTTP 狀態，Responses 與 Chat 均無法完成；需供應商確認 Cloudflare Workers 可達性或提供來源地址，再重跑 95% 評測門檻。失敗請求已驗證會釋放額度，且一次性測試會員均已刪除。

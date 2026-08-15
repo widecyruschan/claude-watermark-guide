@@ -1,0 +1,102 @@
+[
+  {
+    "id": "date-version-location",
+    "text": "On 15 August 2026, Maya Chen released version 2.4 in Hong Kong after completing 37 verification checks.",
+    "anchors": ["15 August 2026", "Maya Chen", "2.4", "Hong Kong", "37"]
+  },
+  {
+    "id": "url-and-percentage",
+    "text": "The full report is available at https://watermarklens.com/report, and its measured success rate was 96.5%.",
+    "anchors": ["https://watermarklens.com/report", "96.5%"]
+  },
+  {
+    "id": "currency-and-company",
+    "text": "Northstar Labs approved a budget of US$18,750 for the Q4 2026 accessibility review.",
+    "anchors": ["Northstar Labs", "US$18,750", "Q4 2026"]
+  },
+  {
+    "id": "citation-reference",
+    "text": "The retention estimate follows Chen and Patel (2025, p. 41) and does not include archived accounts.",
+    "anchors": ["Chen and Patel", "2025", "p. 41"]
+  },
+  {
+    "id": "product-and-limit",
+    "text": "Watermark Lens accepts up to 20,000 characters for Pro members, while the Free request limit is 3,000.",
+    "anchors": ["Watermark Lens", "20,000", "Pro", "Free", "3,000"]
+  },
+  {
+    "id": "quoted-statement",
+    "text": "Dr. Elena Ruiz said the result was preliminary, and the team scheduled a second review for 3 September 2026.",
+    "anchors": ["Dr. Elena Ruiz", "preliminary", "3 September 2026"]
+  },
+  {
+    "id": "technical-identifiers",
+    "text": "Deploy build 7f3c91a to eu-west-1 only after API contract v1.8 passes all 42 checks.",
+    "anchors": ["7f3c91a", "eu-west-1", "v1.8", "42"]
+  },
+  {
+    "id": "email-and-deadline",
+    "text": "Send the signed PDF to legal@example.org before 17:30 UTC on 28 November 2026.",
+    "anchors": ["legal@example.org", "17:30 UTC", "28 November 2026"]
+  },
+  {
+    "id": "negative-qualification",
+    "text": "The study did not establish causation; it observed a correlation of 0.62 across 1,204 responses.",
+    "anchors": ["did not establish causation", "0.62", "1,204"]
+  },
+  {
+    "id": "conditional-promise",
+    "text": "If the audit finishes by Friday, Project Atlas will enter beta on 12 December 2026, but no launch date is guaranteed.",
+    "anchors": ["Project Atlas", "12 December 2026", "no launch date is guaranteed"]
+  },
+  {
+    "id": "chinese-date-name",
+    "text": "林雅婷於2026年8月15日在香港發布第3.2版，並完成了48項驗證。",
+    "anchors": ["林雅婷", "2026年8月15日", "香港", "3.2", "48"]
+  },
+  {
+    "id": "chinese-url",
+    "text": "完整政策載於https://watermarklens.com/privacy，自2026年9月1日起生效。",
+    "anchors": ["https://watermarklens.com/privacy", "2026年9月1日"]
+  },
+  {
+    "id": "measurements",
+    "text": "The prototype weighs 1.35 kg, measures 240 mm by 180 mm, and operates at 12 V.",
+    "anchors": ["1.35 kg", "240 mm", "180 mm", "12 V"]
+  },
+  {
+    "id": "legal-section",
+    "text": "Section 4.3 requires Acme Holdings Ltd. to retain billing records for seven years.",
+    "anchors": ["Section 4.3", "Acme Holdings Ltd.", "seven years"]
+  },
+  {
+    "id": "medical-caution",
+    "text": "The 5 mg dose was used only in the controlled trial and is not a recommendation for patients.",
+    "anchors": ["5 mg", "controlled trial", "not a recommendation"]
+  },
+  {
+    "id": "comparison",
+    "text": "Latency fell from 840 ms to 315 ms, although the sample contained only 60 requests.",
+    "anchors": ["840 ms", "315 ms", "60 requests"]
+  },
+  {
+    "id": "list-like-facts",
+    "text": "The supported regions are Singapore, Tokyo, and Frankfurt; Sydney remains unavailable.",
+    "anchors": ["Singapore", "Tokyo", "Frankfurt", "Sydney", "unavailable"]
+  },
+  {
+    "id": "academic-doi",
+    "text": "The dataset accompanies DOI 10.5281/zenodo.1234567 and contains 8,412 anonymized records.",
+    "anchors": ["10.5281/zenodo.1234567", "8,412", "anonymized"]
+  },
+  {
+    "id": "time-zone",
+    "text": "Maintenance begins at 02:00 HKT on Sunday and is expected to end at 04:30 HKT.",
+    "anchors": ["02:00 HKT", "Sunday", "04:30 HKT"]
+  },
+  {
+    "id": "uncertainty",
+    "text": "Analysts estimate between 2.1 million and 2.4 million users, with a margin of error of ±3%.",
+    "anchors": ["2.1 million", "2.4 million", "±3%"]
+  }
+]
