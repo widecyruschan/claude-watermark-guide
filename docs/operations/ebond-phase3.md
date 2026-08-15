@@ -50,13 +50,13 @@ round(input_tokens * 0.6 + output_tokens * 3.6)
 
 ## 失敗與日誌
 
-429、502、503、504 最多短暫重試一次。timeout、取消和無 HTTP 狀態的傳輸失敗不重試。Provider 失敗會釋放額度；Provider 已成功但資料庫結算失敗時保留 reservation，避免錯誤釋放已產生成本的請求。
+429、502、503、504 最多短暫重試一次。timeout、取消和無 HTTP 狀態的傳輸失敗不重試。Provider 失敗會釋放額度；Provider 已成功但資料庫結算失敗時，會以相同參數重試三次並保留 reservation，避免錯誤釋放已產生成本的請求。最終失敗日誌會保留 request/user ID、Token 與成本，讓管理員在資料庫恢復後以相同參數受控重放冪等 `complete_rewrite_request`。
 
 結構化日誌只包含 request/user ID、模型、Prompt 版本、字元/Token、成本、耗時、HTTP 狀態或標準失敗分類。不得加入輸入、輸出、Authorization、Cookie 或任何 Secret。
 
 ## 評測
 
-`tests/fixtures/rewrite-evaluation.json` 包含 20 個非敏感樣本。評測以數字、日期、專名、URL、引用和重要限定詞的事實錨點為自動門檻，至少 95% 樣本必須保留所有錨點。腳本只在記憶體檢查模型輸出，不保存或打印改寫內容：
+`tests/fixtures/rewrite-evaluation.json` 包含 20 個非敏感的初步相容性樣本。腳本以數字、日期、專名、URL、引用和重要限定詞的事實錨點作自動 smoke gate，至少 95% 樣本必須保留所有錨點；它不能取代 50–100 個樣本的人工意義、新增事實與引用完整性審查。腳本只在記憶體檢查模型輸出，不保存或打印改寫內容：
 
 ```bash
 REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite

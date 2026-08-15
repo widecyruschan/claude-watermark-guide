@@ -281,11 +281,15 @@ async function waitForRetry(delayMs: number, cancellationSignal?: AbortSignal): 
   }
 
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(resolve, delayMs);
     const cancelRetry = () => {
       clearTimeout(timeout);
       reject(new EbondProviderError('PROVIDER_CANCELLED'));
     };
+    const finishRetryDelay = () => {
+      cancellationSignal?.removeEventListener('abort', cancelRetry);
+      resolve();
+    };
+    const timeout = setTimeout(finishRetryDelay, delayMs);
 
     cancellationSignal?.addEventListener('abort', cancelRetry, { once: true });
   });

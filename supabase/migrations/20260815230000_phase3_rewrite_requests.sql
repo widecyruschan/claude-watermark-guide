@@ -49,6 +49,8 @@ create table public.rewrite_requests (
   )
 );
 
+-- Only content-free metadata is retained so retries can be identified without storing user text.
+
 create index rewrite_requests_created_idx
   on public.rewrite_requests (created_at desc);
 
@@ -97,6 +99,7 @@ begin
     raise exception using errcode = '22023', message = 'INVALID_REWRITE_ARGUMENT';
   end if;
 
+  -- The unique insert is the execution claim: concurrent callers block here and only one proceeds.
   insert into public.rewrite_requests (
     user_id,
     request_id,
@@ -138,6 +141,7 @@ begin
     return;
   end if;
 
+  -- Lock the existing claim so its state and quota snapshot cannot change while it is returned.
   select rr.*
   into strict v_existing
   from public.rewrite_requests as rr
@@ -199,6 +203,7 @@ begin
     raise exception using errcode = '22023', message = 'INVALID_USAGE_METRICS';
   end if;
 
+  -- Serialize settlement with failure handling; the nested quota RPC keeps both changes atomic.
   select rr.*
   into v_existing
   from public.rewrite_requests as rr
@@ -282,6 +287,7 @@ begin
     raise exception using errcode = '22023', message = 'INVALID_ERROR_CODE';
   end if;
 
+  -- Serialize release with settlement so a request can never be both charged and released.
   select rr.*
   into v_existing
   from public.rewrite_requests as rr

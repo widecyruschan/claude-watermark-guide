@@ -197,5 +197,19 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
       p_user_id: member.user.id,
     });
     expect(browserComplete.error?.code).toBe('42501');
+
+    const serviceRoleUpdate = await serviceClient
+      .from('rewrite_requests')
+      .update({ prompt_version: 'unauthorized-direct-write' })
+      .eq('user_id', member.user.id)
+      .eq('request_id', requestId);
+    expect(serviceRoleUpdate.error?.code).toBe('42501');
+
+    const serviceRoleDelete = await serviceClient
+      .from('rewrite_requests')
+      .delete()
+      .eq('user_id', member.user.id)
+      .eq('request_id', requestId);
+    expect(serviceRoleDelete.error?.code).toBe('42501');
   });
 });

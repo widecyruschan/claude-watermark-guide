@@ -176,9 +176,15 @@ describe('POST /api/v1/rewrite', () => {
     );
 
     expect(response.status).toBe(503);
+    expect(runtime.repository.completeRewriteRequest).toHaveBeenCalledTimes(3);
     expect(runtime.repository.failRewriteRequest).not.toHaveBeenCalled();
     const serializedLogs = JSON.stringify(consoleError.mock.calls);
     expect(serializedLogs).toContain('rewrite_quota_settlement_failed');
+    expect(JSON.parse(String(consoleError.mock.calls[0]?.[0]))).toMatchObject({
+      costMicrousd: 600,
+      inputTokens: 250,
+      outputTokens: 125,
+    });
     expect(serializedLogs).not.toContain('Settlement-sensitive original.');
     expect(serializedLogs).not.toContain('A natural rewrite.');
   });

@@ -159,7 +159,7 @@ export async function executeRewrite(
   let settlement: { remainingCharacters: number };
 
   try {
-    settlement = await runtime.repository.completeRewriteRequest({
+    settlement = await completeRewriteWithRetry(runtime.repository, {
       costMicrousd,
       inputTokens: providerResult.inputTokens,
       outputTokens: providerResult.outputTokens,
@@ -168,10 +168,14 @@ export async function executeRewrite(
     });
   } catch (settlementError) {
     logRewriteEvent('error', {
+      costMicrousd,
       durationMs: Math.max(0, Date.now() - startedAt),
       errorCode:
         settlementError instanceof RewriteError ? settlementError.code : 'DATABASE_UNAVAILABLE',
       event: 'rewrite_quota_settlement_failed',
+      inputCharacters,
+      inputTokens: providerResult.inputTokens,
+      outputTokens: providerResult.outputTokens,
       requestId: input.requestId,
       userId: input.userId,
     });
@@ -196,6 +200,27 @@ export async function executeRewrite(
     remainingCharacters: settlement.remainingCharacters,
     text: providerResult.text,
   };
+}
+
+async function completeRewriteWithRetry(
+  repository: RewriteRepository,
+  input: CompleteRewriteRequest,
+): Promise<{ remainingCharacters: number }> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await repository.completeRewriteRequest(input);
+    } catch (error) {
+      lastError = error;
+
+      if (!(error instanceof RewriteError) || error.code !== 'DATABASE_UNAVAILABLE') {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 async function createSha256(value: string): Promise<string> {
