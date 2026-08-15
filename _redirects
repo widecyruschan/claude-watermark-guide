@@ -1,0 +1,9 @@
+# Cloudflare Pages redirects (rewrite = 200, URL stays the same in browser)
+# Subpages live in /pages/*.html but are linked as extensionless root URLs.
+/how-it-works /pages/how-it-works 200
+/what-is-claude-watermark /pages/what-is-claude-watermark 200
+/checker /pages/checker 200
+/changes-2026 /pages/changes-2026 200
+/cookie /pages/cookie 200
+/privacy /pages/privacy 200
+/terms /pages/terms 200
