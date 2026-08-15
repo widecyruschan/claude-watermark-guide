@@ -34,7 +34,7 @@ https://claude-watermark-guide.pages.dev/auth/callback
 https://*.claude-watermark-guide.pages.dev/auth/callback
 ```
 
-Email confirmation、refresh token rotation 與 TOTP 已啟用，Email OTP 為 8 位，重發間隔為 1 分鐘。Development 每小時可發 30 封測試郵件；Production 保留每小時 2 封的初始限制，上線前應配合正式 SMTP 與濫用防護再調整。
+Email confirmation 與 refresh token rotation 已啟用，Email OTP 為 8 位，重發間隔為 1 分鐘。Development 每小時可發 30 封測試郵件；Production 保留每小時 2 封的初始限制，上線前應配合正式 SMTP 與濫用防護再調整。
 
 ## Google OAuth
 

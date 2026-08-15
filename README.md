@@ -24,7 +24,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `tests/api/`                API 行為測試
 - `tests/database/`           Supabase Auth、RLS、配額與管理員整合測試
 - `scripts/build.mjs`         靜態資源建置與頁面扁平化
-- `supabase/`                 本機 Auth 設定、資料庫 migration 與開發 seed
+- `supabase/`                 本機 Auth 設定、資料庫 schema 與方案 seed migrations
 - `docs/prd/backend-membership-prd.md` 後台、會員、訂閱與管理功能 PRD
 - `docs/operations/supabase-phase2.md` Supabase 環境、Auth、部署與管理員操作手冊
 - `sitemap.xml` / `robots.txt` SEO 索引
@@ -129,5 +129,5 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 完成的主要任務：建立新加坡 dev/prod 專案；配置 Magic Link Site URL、callback allowlist、Email confirmation、refresh rotation 與 TOTP；建立 7 張會員/訂閱/用量/審計資料表、Free/Pro 定義、首次登入 Profile 觸發器、RLS 和最小 grant；實作 service-role-only 的 reserve/settle/release 與管理員 bootstrap RPC。
 - 關鍵決策和解決方案：瀏覽器只能讀自己的會員與用量資料並更新 display name；方案、角色、訂閱與 Ledger 均由伺服器控制；配額以 Usage Period row lock 序列化並以 immutable Ledger 保證冪等；資料庫密碼只存 macOS Keychain。
 - 使用的技術棧：Supabase Auth、Postgres 17、PostgREST、RLS、PL/pgSQL、Supabase CLI、Vitest、GitHub Actions。
-- 新增或修改檔案：新增 `supabase/config.toml`、Phase 2 migration/seed、資料庫整合測試、測試與管理員命令、Supabase 運維手冊；更新 package 工具鏈、CI 與 README。
+- 新增或修改檔案：新增 `supabase/config.toml`、Phase 2 migrations、資料庫整合測試、測試與管理員命令、Supabase 運維手冊；更新 package 工具鏈、CI 與 README。
 - 後續建議：取得 Google OAuth Client ID/Secret 後啟用兩個遠端 Provider；管理員先完成一次產品登入，再執行受控 bootstrap 命令；Phase 3 以 Pages Functions 驗證 JWT 後呼叫 service-role-only 配額 RPC。

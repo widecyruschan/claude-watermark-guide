@@ -35,9 +35,13 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
   });
 
   afterAll(async () => {
-    await Promise.all(
+    const deletionResults = await Promise.all(
       [...createdUserIds].map((userId) => serviceClient.auth.admin.deleteUser(userId)),
     );
+
+    for (const { error } of deletionResults) {
+      expect(error).toBeNull();
+    }
   });
 
   async function createVerifiedUser(label: string): Promise<{
@@ -77,6 +81,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
     expect(registration.error).toBeNull();
 
     const usersResult = await serviceClient.auth.admin.listUsers();
+    expect(usersResult.error).toBeNull();
     const registeredUser = usersResult.data.users.find((user) => user.email === email);
     expect(registeredUser).toBeDefined();
     createdUserIds.add(registeredUser!.id);
@@ -104,6 +109,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .from('profiles')
       .select('id, role, status')
       .single();
+    expect(profileAfterVerification.error).toBeNull();
     expect(profileAfterVerification.data).toEqual({
       id: registeredUser!.id,
       role: 'member',
@@ -117,7 +123,9 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
     expect(refresh.data.session?.user.id).toBe(registeredUser!.id);
 
     expect((await browserClient.auth.signOut()).error).toBeNull();
-    expect((await browserClient.auth.getSession()).data.session).toBeNull();
+    const sessionAfterSignOut = await browserClient.auth.getSession();
+    expect(sessionAfterSignOut.error).toBeNull();
+    expect(sessionAfterSignOut.data.session).toBeNull();
   });
 
   it('isolates user-owned rows and rejects browser writes to protected data', async () => {
@@ -125,6 +133,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
     const second = await createVerifiedUser('rls-second');
 
     const ownProfile = await first.browserClient.from('profiles').select('id').single();
+    expect(ownProfile.error).toBeNull();
     expect(ownProfile.data?.id).toBe(first.user.id);
 
     const otherProfile = await first.browserClient
@@ -176,6 +185,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .select('display_name')
       .eq('id', second.user.id)
       .single();
+    expect(unchangedOtherProfile.error).toBeNull();
     expect(unchangedOtherProfile.data?.display_name).toBeNull();
 
     const roleWrite = await first.browserClient
@@ -219,6 +229,9 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       p_user_id: first.user.id,
     });
     expect(browserReservation.error?.code).toBe('42501');
+
+    const serviceRoleDelete = await serviceClient.from('plans').delete().eq('code', 'free');
+    expect(serviceRoleDelete.error?.code).toBe('42501');
   });
 
   it('serializes concurrent reservations and settles or releases each request once', async () => {
@@ -278,6 +291,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .select('reserved_characters, consumed_characters')
       .eq('user_id', quotaUser.user.id)
       .single();
+    expect(usagePeriod.error).toBeNull();
     expect(usagePeriod.data).toEqual({
       consumed_characters: 1_000,
       reserved_characters: 0,
@@ -287,9 +301,57 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .from('usage_ledger')
       .select('entry_type')
       .eq('user_id', quotaUser.user.id);
+    expect(ledger.error).toBeNull();
     expect(ledger.data?.filter((entry) => entry.entry_type === 'reserve')).toHaveLength(4);
     expect(ledger.data?.filter((entry) => entry.entry_type === 'release')).toHaveLength(3);
     expect(ledger.data?.filter((entry) => entry.entry_type === 'settle')).toHaveLength(1);
+  });
+
+  it('keeps a Pro billing period separate when its dates match the Free month', async () => {
+    const proUser = await createVerifiedUser('pro-overlap');
+    const freePeriod = await serviceClient
+      .from('usage_periods')
+      .select('period_start, period_end')
+      .eq('user_id', proUser.user.id)
+      .eq('plan_code', 'free')
+      .single();
+    expect(freePeriod.error).toBeNull();
+
+    const subscriptionUpdate = await serviceClient
+      .from('subscriptions')
+      .update({
+        current_period_end: freePeriod.data!.period_end,
+        current_period_start: freePeriod.data!.period_start,
+        plan_code: 'pro',
+        status: 'active',
+      })
+      .eq('user_id', proUser.user.id);
+    expect(subscriptionUpdate.error).toBeNull();
+
+    const requestId = crypto.randomUUID();
+    const reservation = await serviceClient.rpc('reserve_quota', {
+      p_input_characters: 15_000,
+      p_request_id: requestId,
+      p_user_id: proUser.user.id,
+    });
+    expect(reservation.error).toBeNull();
+
+    const usagePeriods = await serviceClient
+      .from('usage_periods')
+      .select('plan_code, base_allowance')
+      .eq('user_id', proUser.user.id)
+      .order('base_allowance');
+    expect(usagePeriods.error).toBeNull();
+    expect(usagePeriods.data).toEqual([
+      { base_allowance: 10_000, plan_code: 'free' },
+      { base_allowance: 500_000, plan_code: 'pro' },
+    ]);
+
+    const release = await serviceClient.rpc('release_quota', {
+      p_request_id: requestId,
+      p_user_id: proUser.user.id,
+    });
+    expect(release.error).toBeNull();
   });
 
   it('bootstraps one verified administrator through an audited service operation', async () => {
@@ -315,12 +377,14 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .select('role')
       .eq('id', administrator.user.id)
       .single();
+    expect(profile.error).toBeNull();
     expect(profile.data?.role).toBe('admin');
 
     const auditEntries = await serviceClient
       .from('admin_audit_logs')
       .select('action, reason, target_user_id')
       .eq('request_id', requestId);
+    expect(auditEntries.error).toBeNull();
     expect(auditEntries.data).toEqual([
       {
         action: 'administrator.bootstrap',
