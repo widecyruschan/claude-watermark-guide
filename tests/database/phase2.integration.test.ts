@@ -232,6 +232,12 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
 
     const serviceRoleDelete = await serviceClient.from('plans').delete().eq('code', 'free');
     expect(serviceRoleDelete.error?.code).toBe('42501');
+
+    const serviceRoleRoleWrite = await serviceClient
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', first.user.id);
+    expect(serviceRoleRoleWrite.error?.code).toBe('42501');
   });
 
   it('serializes concurrent reservations and settles or releases each request once', async () => {

@@ -56,7 +56,5 @@ if (bootstrapError) {
 }
 
 console.log(
-  roleChanged
-    ? `Administrator access granted to ${administratorEmail}.`
-    : `${administratorEmail} is already an administrator.`,
+  roleChanged ? 'Administrator access granted.' : 'The account is already an administrator.',
 );
