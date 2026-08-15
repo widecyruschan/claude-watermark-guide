@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  verify-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,24 +23,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Build flattened deploy dir
-        run: |
-          mkdir -p dist
-          # copy root-level files/dirs (css, js, assets, images, robots, sitemap, index, 404, etc.)
-          for item in $(ls -A | grep -vE '^(pages|dist|\.git|\.github|\.wrangler|README\.md|\.gitignore)$'); do
-            cp -r "$item" dist/
-          done
-          # flatten pages/*.html -> dist/<name>.html so /page resolves via native clean-URL
-          cp pages/*.html dist/
-          echo "--- dist contents ---"
-          ls -1 dist
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify
+        run: npm run check
+
+      - name: Build
+        run: npm run build
 
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@latest pages deploy dist \
+          npx wrangler pages deploy dist \
             --project-name claude-watermark-guide \
             --commit-dirty=true
