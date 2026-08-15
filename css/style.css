@@ -129,6 +129,9 @@ footer .container { display: flex; gap: 16px; flex-wrap: wrap; }
 
 /* Responsive — mobile */
 @media (max-width: 768px) {
+  .site-header .container { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .nav { display: flex; flex-wrap: wrap; gap: 6px 16px; width: 100%; }
+  .nav a { margin-left: 0; }
   .hero { grid-template-columns: 1fr; }
   .nav-cards { grid-template-columns: 1fr; }
   .article-layout { grid-template-columns: 1fr; }
