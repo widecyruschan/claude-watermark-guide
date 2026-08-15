@@ -13,6 +13,9 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 ## 结构
 - `index.html`                首頁（hero + 工具卡 + 導航卡）
 - `pages/checker.html`        免費自測工具（純客戶端，文本不上傳）
+- `pages/login.html`          Google OAuth 登入頁
+- `pages/account.html`        會員 Profile、方案、週期、用量及登出
+- `auth/callback.html`        Supabase PKCE callback 及 session exchange
 - `pages/what-is-*.html`       解釋型文章（FAQPage 結構）
 - `pages/how-it-works.html`    技術原理（公開部分，標 [待确认]）
 - `pages/changes-2026.html`    近期變化時間線（標 [待确认] + 時效提示）
@@ -21,6 +24,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `js/checker.js`             客戶端啟發式（無 API、無上傳）
 - `functions/api/[[route]].ts` Pages Functions API 入口
 - `src/api/app.ts`            Hono API、請求 ID、驗證與錯誤合約
+- `src/client/auth.ts`        瀏覽器 Supabase Auth、callback、session 及會員資料
 - `tests/api/`                API 行為測試
 - `tests/database/`           Supabase Auth、RLS、配額與管理員整合測試
 - `scripts/build.mjs`         靜態資源建置與頁面扁平化
@@ -30,17 +34,27 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `docs/operations/ebond-phase3.md` EBond 重寫 API、冪等、計費與聯調運維手冊
 - `sitemap.xml` / `robots.txt` SEO 索引
 
-## 待回填（標 [待确认] 項）
-- `[DOMAIN]` → 真實域名（7 處：canonical + sitemap + robots）
+## 已確認的產品設定
+- 正式網域：`watermarklens.com`
+- 私隱及支援聯絡電郵：`contact@watermarklens.com`
+- 首發市場及語言：美國／英文
+- 分析服務：首頁使用 Plausible-compatible 無 Cookie 統計，不使用 GA4 或 Microsoft Clarity
+- AI 單次輸入上限：Free 3,000 字符；Pro 20,000 字符
+- AI 控制：語氣下拉選單、正式程度低／中／高、重寫強度低／中／高；輸出自動保留輸入語言
+
+## 尚待確認
+- Pro 正式價格，以及 Free／Pro 正式月度字符額度
+- 語氣下拉選單的正式 allowlist
 - 文章頁真實來源引用（Help Center / Forbes / Reddit）
-- 真實 GA4 / Clarity ID（目前 cookie banner 存在但未埋真實 SDK）
-- /checker 是否 index（sitemap 默認 index，待確認）
+- `/checker` 是否繼續允許搜尋引擎索引（sitemap 目前包含此頁）
+- Privacy、Cookie、Terms 草案的正式法律審核、營運主體名稱、適用州法及爭議處理條款
+- EBond 的合約資料保留期；production 帳戶及 `gpt-5.5` Responses 路由已驗證可用
 
 ## 部署到 Cloudflare Pages
 1. 使用 Node.js 22 安裝依賴：`npm ci`
 2. 執行完整檢查：`npm run check`
 3. CLI 部署：`npx wrangler pages deploy dist --project-name claude-watermark-guide`
-4. 綁定自訂域 + 替換 `[DOMAIN]`
+4. 確認 `watermarklens.com` 自訂網域、DNS 與 Auth redirect URL
 
 ## 本地預覽
 ```bash
@@ -157,3 +171,91 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：Cloudflare Pages/Workers、原生 HTML/CSS/JavaScript、Hono、Vitest、Supabase Auth/Postgres/RLS、Plausible、EBond API。
 - 新增或修改檔案：修改 Checker、首頁、CSS、Privacy/Cookie、EBond Provider/API/運維手冊與本 README；新增 Checker、分析政策、EBond Secret/連線診斷回歸測試；本機保留完整 QA 報告與 38 張證據截圖。
 - 後續建議：Phase 1/2 與 Phase 3 的認證、冪等、配額釋放均通過；EBond production Key/帳戶對 `/v1/models`、Responses 與 Chat 均未返回上游 HTTP 狀態，需 EBond 檢查該帳戶及 `gpt-5.5` 路由。內容頁的 `[待確認]` 必須取得正式來源、日期與私隱聯絡資料後再移除。
+
+### 2026-08-16：鎖定首發設定並整理法律草案
+- 會話主要目的：記錄已確認的網域、聯絡方式、首發市場、重寫控制及單次字符限制，並將 Privacy、Cookie、Terms 整理為可審閱草案。
+- 完成的主要任務：確認 `watermarklens.com`、`contact@watermarklens.com` 及 US/English 首發；定義語氣、正式程度、重寫強度與自動保留輸入語言的產品要求；擴寫三份英文法律頁並加入回歸測試。
+- 關鍵決策和解決方案：Free／Pro 單次上限鎖定為 3,000／20,000 字符；月度額度、Pro 價格及語氣 allowlist 仍維持待確認；AI 原文和結果預設不落庫，但法律草案不替 EBond 承諾尚未確認的保留期。
+- 使用的技術棧：原生 HTML、Cloudflare Pages、Supabase、EBond AI、Plausible-compatible Analytics、Vitest。
+- 新增或修改檔案：更新 `docs/prd/backend-membership-prd.md`、`pages/privacy.html`、`pages/cookie.html`、`pages/terms.html`、`README.md`；新增 `tests/legal-pages.test.ts`。未建立或提交任何 `.env`、密碼、Token 或 API Key。
+- 後續建議：由美國法律顧問確認營運主體、適用州法、爭議處理、退款及州級私隱披露；在 Phase 4 開發前確認語氣 allowlist，並在付費上線前鎖定正式價格和月度額度。
+
+### 2026-08-16：更新 EBond production Secret 並完成最小聯調
+- 會話主要目的：將 EBond 網關統一為 `https://api.ebondai.com`，安全更新 Cloudflare Pages production 的 `EBOND_API_KEY`，並確認 `gpt-5.5` Responses API 可用。
+- 完成的主要任務：核對 `wrangler.toml` 的公開設定；透過 Wrangler 互動式輸入更新加密 Secret；確認遠端只顯示 Secret 名稱及加密狀態；執行不輸出請求／回應文字的 `/v1/models` 與 `/v1/responses` 最小檢查。
+- 關鍵決策和解決方案：密鑰只存在 Cloudflare production Secret 及單次程序記憶體，不寫入命令參數、原始碼、日誌、`.env` 或 `.dev.vars`；直連檢查確認模型列表和 Responses 均返回 HTTP 200，且 usage 欄位完整。
+- 使用的技術棧：Cloudflare Pages、Wrangler、EBond API、`gpt-5.5`、Responses API。
+- 新增或修改檔案：更新 `docs/operations/ebond-phase3.md` 與本 README 的非敏感聯調狀態；未新增或提交任何密碼、Token、API Key、`.env` 或 `.dev.vars`。
+- 後續建議：使用短期測試會員 JWT 對 production `POST /api/v1/rewrite` 執行一次受控端到端請求；由於密鑰曾進入聊天記錄，應在 EBond 後台輪換後再以相同步驟更新 Cloudflare Secret。
+
+### 2026-08-16：PRD 轉為香港繁體中文
+- 會話主要目的：把後台及會員系統 PRD 由中英混合內容完整轉為香港繁體中文。
+- 完成的主要任務：翻譯問題陳述、解決方案、40 條用戶故事、功能需求、資料模型、API contract、測試策略、Phase 0–8、驗收準則、範圍及風險；保留 API 路徑、程式識別字及第三方技術名稱。
+- 關鍵決策和解決方案：統一使用香港常用的「用戶、登入、登出、電郵、私隱、帳單、伺服器、資料庫、網絡」等詞彙；`low`／`medium`／`high`、error code、Secret 名稱及 Mermaid 技術標識維持原文，避免影響開發 contract。
+- 使用的技術棧：Markdown、Mermaid、Cloudflare Pages、Supabase、Stripe、EBond API。
+- 新增或修改檔案：完整翻譯 `docs/prd/backend-membership-prd.md`，並更新本 README 會話記錄；未修改程式邏輯，亦未新增任何密碼、Token、API Key、`.env` 或 `.dev.vars`。
+- 後續建議：後續 PRD 更新繼續使用香港繁體中文；產品正式價格、月度配額及語氣 allowlist 確認後，同步更新 PRD、資料庫 seed 及前端文案。
+
+### 2026-08-16：建立 Google OAuth 伺服器變數模板
+- 會話主要目的：為 Supabase Google OAuth 產生可由產品負責人填寫的伺服器變數，不把 Client Secret 放入 Cloudflare 或 Git。
+- 完成的主要任務：建立被 Git 忽略的本機 `.env.local` 空白模板；確認 `supabase/config.toml` 已引用對應變數；補充本機載入方式、dev／prod Supabase Dashboard 欄位及 Google Authorized redirect URI。
+- 關鍵決策和解決方案：Google OAuth 由 Supabase Auth 處理，使用 `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` 及 `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`；Hosted 專案必須在 Supabase Dashboard 填寫，Cloudflare Pages 不保存 Google Client Secret。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0、Supabase CLI、Shell environment variables。
+- 新增或修改檔案：本機新增已被忽略的 `.env.local`；更新 `docs/operations/supabase-phase2.md` 及本 README。模板不含真實憑據，亦不會被 Git 追蹤。
+- 後續建議：填入 Google Client ID／Secret 後，先測試本機 callback，再啟用 dev 及 production Provider，最後驗證 Pages preview 與 `watermarklens.com` 登入流程。
+
+### 2026-08-16：Google OAuth 遠端配置測試
+- 會話主要目的：以不建立帳戶的方式驗證 Supabase development／production Google OAuth Provider、Google callback 參數及網站登入完成路由。
+- 完成的主要任務：分別呼叫兩個 hosted Supabase `/auth/v1/authorize?provider=google` endpoint；檢查 production 及 Pages preview 的 `/auth/callback`；搜尋原始碼及 build artifact 是否包含 OAuth callback handler。
+- 關鍵決策和解決方案：兩個 Supabase 專案均返回 HTTP 400、`validation_failed` 及 `Unsupported provider: provider is not enabled`，因此沒有進入 Google 帳戶選擇或建立 Auth 用戶；兩個網站 callback URL 均返回 404，原始碼只有 allowlist，尚未實作 `signInWithOAuth` 或 `exchangeCodeForSession`。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0、Cloudflare Pages、HTTP redirect validation。
+- 新增或修改檔案：只追加本 README 測試記錄；未更改 Supabase／Google 設定、未建立測試帳戶，亦未讀取或輸出 Client Secret。
+- 後續建議：在 dev／production Supabase Dashboard 分別開啟 Google Provider 並儲存，然後實作及部署 `/auth/callback` session exchange；完成後重新執行 redirect 及實際登入測試。
+
+### 2026-08-16：Google OAuth 配置重試
+- 會話主要目的：在 Supabase 設定更新後重新驗證 development／production Google OAuth redirect 及 Google 授權頁。
+- 完成的主要任務：重新呼叫兩個 Supabase authorize endpoint；驗證 production 會以 HTTP 302 跳轉至 Google，並確認 Supabase callback URI 完全正確；使用瀏覽器只讀取 Google 授權錯誤頁，沒有選擇帳戶或提交登入。
+- 關鍵決策和解決方案：production Google Provider 已啟用，但 Google 返回 HTTP 401 `invalid_client` 及「OAuth client was not found」，表示 Supabase 內的 production Client ID 無效、已刪除或來自錯誤 Google Cloud 專案；development Provider 仍未啟用；production／preview 的 `/auth/callback` 仍返回 404。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0、Cloudflare Pages、Chrome。
+- 新增或修改檔案：只追加本 README 測試記錄；未修改 Google／Supabase 設定、未提交登入、未建立 Auth 用戶，亦未記錄 Google 帳戶或 OAuth Client ID。
+- 後續建議：從 Google Cloud Console 的 Web application OAuth 2.0 credential 重新複製完整 Client ID 至 production Supabase 並儲存；啟用 development Provider；實作及部署 `/auth/callback` session exchange 後再重試完整登入。
+
+### 2026-08-16：定位 Production Supabase Google Provider
+- 會話主要目的：說明 Production Supabase 的正確專案及 Google Provider 設定入口。
+- 完成的主要任務：確認 production 專案為 `claude-watermark-guide-prod`，project ref 為 `oyxdensbufzdzgmfuhyd`，並核對 Supabase 官方 Google Provider 設定路徑。
+- 關鍵決策和解決方案：Google Client ID／Secret 應填入 Supabase Dashboard 的 Authentication → Providers → Google，而不是 Cloudflare Pages 變數。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0。
+- 新增或修改檔案：只追加本 README 會話記錄；未修改任何 Supabase／Google 設定，亦未處理或保存憑據。
+- 後續建議：在 production 專案重新貼上有效的 Web application Client ID，啟用 Google Provider 並儲存後再次測試。
+
+### 2026-08-16：Google OAuth 第二次重試
+- 會話主要目的：再次驗證 production Google Client ID 更新後的 Supabase OAuth redirect 及 Google 授權狀態。
+- 完成的主要任務：確認 production Supabase 仍可正確跳轉至 Google，Client ID 參數存在且 callback 精確匹配；在不顯示帳戶或 Client ID 的情況下檢查 Google 錯誤訊號。
+- 關鍵決策和解決方案：Google 仍返回 HTTP 401 `invalid_client` 及「OAuth client was not found」，未進入帳戶選擇；development Provider 仍未啟用，production／preview `/auth/callback` 仍返回 404。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0、Cloudflare Pages、Chrome。
+- 新增或修改檔案：只追加本 README 測試記錄；未修改遠端設定、未提交登入、未建立 Auth 用戶，亦未保存 Google 帳戶或 OAuth Client ID。
+- 後續建議：確認 Google Cloud Console 目前所選 Project 正確，從 Google Auth Platform → Clients 開啟未被刪除的 Web application credential，重新複製完整 Client ID 至 production Supabase 並按 Save；等待約一分鐘後再測試。
+
+### 2026-08-16：Google OAuth 第三次重試
+- 會話主要目的：確認更新後的 production Google Client ID 是否已獲 Google 接受，並重新檢查 OAuth 返回路徑。
+- 完成的主要任務：驗證 production Supabase 正確跳轉 Google、Client ID 存在、Supabase callback URI 匹配；確認 Google 不再返回 `invalid_client` 或 `redirect_uri_mismatch`，並成功返回 `watermarklens.com/auth/callback`。
+- 關鍵決策和解決方案：現有瀏覽器 Google session 自動完成驗證，因此 production Supabase 可能已建立或更新 Auth 用戶；應用程式 callback 仍返回 404，未能在前端保存 Supabase session；development Provider 仍未啟用。
+- 使用的技術棧：Supabase Auth、Google OAuth 2.0、Cloudflare Pages、Chrome。
+- 新增或修改檔案：只追加本 README 測試記錄；未刪除或修改 Auth 用戶、未更改遠端設定，亦未記錄 Google 帳戶、OAuth Client ID 或 callback credential。
+- 後續建議：實作及部署 `/auth/callback` session 處理，再驗證登入後 session、Profile 建立、refresh 及登出；如需 development 測試，另行啟用 development Google Provider。
+
+### 2026-08-16：確定 Google OAuth callback 處理方案
+- 會話主要目的：說明 Production Google OAuth 已通過後，應如何處理應用程式 callback 404 及 session 建立。
+- 完成的主要任務：確定不再修改 Google Client 或 production Provider；建議在現有靜態站使用 Supabase JS PKCE 流程，加入登入入口、`/auth/callback`、session 恢復、登出及錯誤狀態。
+- 關鍵決策和解決方案：將來源頁面建立為 `auth/callback.html` 並輸出至 `dist/auth/callback.html`，讓 Cloudflare Pages clean URL 提供 `/auth/callback`；callback 只使用公開 Supabase URL／publishable key 交換 code，絕不把 Google Client Secret、Supabase service-role key 或 EBond Key 放入前端。
+- 使用的技術棧：Supabase Auth JS、Google OAuth 2.0、PKCE、Cloudflare Pages、原生 HTML／TypeScript。
+- 新增或修改檔案：只追加本 README 決策記錄；未實作或部署認證程式碼，亦未修改遠端設定。
+- 後續建議：下一個開發工作應實作 login／callback／account session 最小垂直流程，加入 callback、refresh、logout 及 RLS 測試後再部署。
+
+### 2026-08-16：實作 Google OAuth 會員登入流程
+- 會話主要目的：完成 Production Google OAuth 的應用程式 callback、session、會員帳戶及登出流程，移除 `/auth/callback` 404 阻塞。
+- 完成的主要任務：加入 `/login`、`/auth/callback`、`/account`；以 Supabase JS PKCE 交換 code；加入 session 持久化、自動 refresh、過期／登出處理；顯示 Profile、有效方案、帳單狀態、週期及真正剩餘字符；建立公開 Auth config endpoint 及 esbuild browser bundle。
+- 關鍵決策和解決方案：前端只取得 Supabase URL 及 publishable key，service-role／Google／EBond Secret 不進入 browser bundle；callback 支援重複載入時恢復已存在 session；方案顯示使用與資料庫配額一致的 active／trialing 及有效期規則；配置錯誤回傳標準化 HTTP 503。
+- 使用的技術棧：Supabase Auth JS、Google OAuth 2.0、PKCE、TypeScript、esbuild、Cloudflare Pages Functions、Vitest。
+- 新增或修改檔案：新增登入、callback、會員頁、`src/client/auth.ts` 及五組 Auth 測試；更新 API、build、smoke、樣式、首頁、Supabase 運維手冊、package 工具鏈及本 README；本機 `.dev.vars` 保持 Git ignored，未提交任何 Secret。
+- 後續建議：部署後完成真實 Google 登入、callback、Profile、refresh 及 logout 驗證；development Google Provider、Magic Link、刪除帳戶及完整會員選單仍屬後續 Phase 4 工作。

@@ -1,534 +1,542 @@
-# 后台与会员系统 PRD
+# 後台及會員系統 PRD
 
-> 版本：1.0  
-> 日期：2026-08-15  
-> 状态：Ready for implementation  
-> 产品：Claude Watermark Guide / AI 文本润色工具
-> 追踪：[GitHub Issue #1](https://github.com/widecyruschan/claude-watermark-guide/issues/1)
+> 版本：1.1
+> 日期：2026-08-16
+> 狀態：Phase 0 產品決策部分已落實
+> 語言：香港繁體中文
+> 產品：Claude Watermark Guide / AI 文字重寫工具
+> 追蹤：[GitHub Issue #1](https://github.com/widecyruschan/claude-watermark-guide/issues/1)
 
-## Problem Statement
+## 問題陳述
 
-现有产品是部署在 Cloudflare Pages 的纯静态工具站，能够在浏览器本地检查部分不可见 Unicode 字符，但没有用户体系、服务端 AI 润色、用量控制、订阅收费或运营后台。用户无法保存自己的会员状态、查看剩余额度、购买套餐或管理账单；运营方也无法控制成本、处理异常账户、查看订阅状态或衡量 AI 请求的质量与毛利。
+現有產品是部署於 Cloudflare Pages 的純靜態工具網站，可以在瀏覽器本機檢查部分不可見 Unicode 字符，但尚未提供用戶系統、伺服器端 AI 重寫、用量控制、訂閱收費或營運後台。用戶無法保存會員狀態、查看剩餘配額、購買方案或管理帳單；營運方亦無法控制成本、處理異常帳戶、查看訂閱狀態，或衡量 AI 請求的質素與毛利。
 
-产品需要在保留“本地字符清理不上传文本”优势的同时，增加由 EBond API `gpt-5.5` 驱动的 AI 文本润色能力，并建立完整但不过度复杂的会员、订阅、配额和管理后台。系统还必须避免将“清理不可见字符”错误宣传为能够识别 AI 来源、移除可靠水印或保证绕过 AI 检测。
+產品需要保留「本機清理字符，不上傳文字」的優勢，同時加入由 EBond API `gpt-5.5` 驅動的 AI 文字重寫功能，並建立完整但不過度複雜的會員、訂閱、配額及管理後台。系統亦必須避免把「清理不可見字符」錯誤宣傳成可以識別 AI 來源、移除可靠水印，或保證繞過 AI 偵測。
 
-当前已经确认的基础条件：
+目前已確認的基本條件：
 
-- 前端主体已经完成，当前使用原生 HTML、CSS 和 JavaScript。
-- 站点部署在 Cloudflare Pages，production 环境已经配置加密的 `EBOND_API_KEY`。
-- EBond 网关根地址为 `https://api.ebondai.com`，模型为 `gpt-5.5`。
-- EBond 价格按每百万输入/输出 Token `US$0.6/US$3.6` 估算。
-- 首选 Responses API，Chat Completions 作为兼容回退。
-- 默认不保存用户提交的原文或模型生成的完整结果。
+- 前端主體已完成，目前使用原生 HTML、CSS 及 JavaScript。
+- 網站部署於 Cloudflare Pages，production 環境已配置加密的 `EBOND_API_KEY`。
+- EBond 網關根地址為 `https://api.ebondai.com`，模型為 `gpt-5.5`。
+- EBond 價格按每百萬 input/output Token `US$0.6/US$3.6` 估算。
+- 優先使用 Responses API，Chat Completions 只作相容回退。
+- 預設不保存用戶提交的原文或模型生成的完整結果。
+- 正式網域為 `watermarklens.com`，私隱及支援聯絡電郵為 `contact@watermarklens.com`。
+- 首發市場為美國，產品及服務介面使用英文。
 
-## Solution
+## 解決方案
 
-在现有 Cloudflare Pages 项目中增加同源 Pages Functions API，并以 Supabase 提供认证、Postgres 数据库和行级权限，以 Stripe Checkout、Customer Portal 和 Webhook 提供月度订阅。
+在現有 Cloudflare Pages 專案加入同源 Pages Functions API，使用 Supabase 提供身份驗證、Postgres 資料庫及列級權限，並使用 Stripe Checkout、Customer Portal 及 Webhook 提供月度訂閱。
 
-产品对用户呈现两条清晰独立的能力：
+產品向用戶提供兩項清晰而獨立的功能：
 
-1. 本地字符工具：检测并清理可疑不可见字符、展示移除统计、按用户选择处理长破折号。该流程不上传文本、不要求登录、不消耗额度。
-2. AI 文本润色：在保留事实、含义、引用、链接和格式的前提下改善模板化表达、重复、僵硬过渡和句式节奏。该流程要求登录、经过服务端调用模型并消耗会员字符额度。
+1. 本機字符工具：偵測及清理可疑不可見字符、顯示移除統計，並按用戶選擇處理長破折號。整個流程不上傳文字、不要求登入，亦不消耗配額。
+2. AI 文字重寫：在保留事實、意思、引用、連結及格式的前提下，改善樣板化表達、重複、僵硬過渡及句式節奏。此流程要求登入，由伺服器呼叫模型並消耗會員字符配額。
 
-系统为免费会员提供可体验但可控的月度额度，为 Pro 会员提供更高额度、更长单次文本和账单管理。管理后台提供用户、订阅、用量、成本、错误与审计能力，但不允许管理员查看用户原文。
+系統向免費會員提供可試用但受控的月度配額，向 Pro 會員提供較高配額、較長的單次文字上限及帳單管理。管理後台提供用戶、訂閱、用量、成本、錯誤及審計功能，但不允許管理員查看用戶原文。
 
-## Goals and Success Metrics
+## 目標及成功指標
 
-### 产品目标
+### 產品目標
 
-- 让新用户无需学习即可完成注册、润色、查看额度和升级订阅。
-- 让付费状态在 Stripe 支付成功后可靠地同步为产品权限。
-- 保持本地字符工具永久免费且不上传文本。
-- 将 AI 成本限制在可预测范围，并能按用户和请求追踪。
-- 为运营人员提供足够的后台能力，不在首版建设复杂 CRM 或财务系统。
+- 讓新用戶無須學習，即可完成註冊、重寫、查看配額及升級訂閱。
+- Stripe 付款成功後，可靠地把付款狀態同步成產品權限。
+- 本機字符工具維持永久免費，而且不上傳文字。
+- 把 AI 成本限制在可預測範圍，並可按用戶及請求追蹤。
+- 為營運人員提供足夠的後台功能，首個版本不建立複雜 CRM 或財務系統。
 
-### 首版成功指标
+### 首個版本成功指標
 
-| 指标 | 目标 |
+| 指標 | 目標 |
 | --- | --- |
-| AI 请求成功率 | 最近 24 小时不低于 98% |
-| AI 首字节延迟 | P95 不高于 5 秒 |
-| AI 完整请求延迟 | 3,000 字符请求 P95 不高于 20 秒 |
-| 支付权限同步 | 95% 在 30 秒内完成，100% 在 2 分钟内完成 |
-| 重复扣额度 | 0 |
-| 未授权后台访问 | 0 |
-| 密钥进入浏览器或 Git | 0 |
-| 付费套餐模型毛利 | 正常使用场景不低于 70% |
+| AI 請求成功率 | 最近 24 小時不少於 98% |
+| AI 首個字節延遲 | P95 不多於 5 秒 |
+| AI 完整請求延遲 | 3,000 字符請求的 P95 不多於 20 秒 |
+| 付款權限同步 | 95% 在 30 秒內完成，100% 在 2 分鐘內完成 |
+| 重複扣除配額 | 0 |
+| 未獲授權的後台存取 | 0 |
+| 密鑰進入瀏覽器或 Git | 0 |
+| 付費方案模型毛利 | 正常使用情況不少於 70% |
 
-## Assumptions
+## 產品決策及假設
 
-- 首版面向英文和国际用户，以 USD 月付；界面文案继续使用英文。
-- Pro 暂定 `US$9/月`，正式创建 Stripe Price 前由产品负责人最终确认。
-- 免费会员每月 10,000 个输入字符，单次最多 3,000 字符。
-- Pro 会员每个账单周期 500,000 个输入字符，单次最多 20,000 字符。
-- 用户侧以输入字符作为可理解的额度单位，后台同时记录真实输入/输出 Token 与估算成本。
-- 首版不提供年付、团队账户、按量充值包或中国大陆本地支付。
+- 首個版本面向美國市場，以英文提供產品及服務，付費方案使用 USD 月付。
+- Pro 暫定為 `US$9/月`，正式建立 Stripe Price 前由產品負責人最終確認。
+- Free 每月 10,000 個輸入字符仍屬暫定；單次最多 3,000 字符已確認。
+- Pro 每個帳單週期 500,000 個輸入字符仍屬暫定；單次最多 20,000 字符已確認。
+- 重寫控制包括語氣下拉選單、正式程度（低／中／高）及重寫強度（低／中／高）。語氣的正式 allowlist 仍須在 Phase 4 開發前確認。
+- 系統自動識別並保留用戶的輸入語言，首個版本不提供手動語言選單。
+- 用戶介面以輸入字符作為容易理解的配額單位，後台同時記錄實際 input/output Token 及估算成本。
+- 首個版本不提供年付、團隊帳戶、按量增值套裝或中國內地本地付款。
 
-## User Stories
+## 用戶故事
 
-1. As a visitor, I want to clean invisible characters locally without signing in, so that my text never leaves my browser.
-2. As a visitor, I want to see which Unicode characters were detected, so that I understand what the tool changed.
-3. As a visitor, I want to choose how em dashes are handled, so that the output matches my writing style.
-4. As a visitor, I want the site to explain that character cleaning is not proof of AI authorship, so that I am not misled.
-5. As a visitor, I want to understand why AI rewriting requires an account, so that the transition from free tool to membership feels reasonable.
-6. As a new user, I want to register with an email magic link, so that I do not need to create another password.
-7. As a new user, I want to sign in with Google, so that registration takes only one step.
-8. As a user, I want my session to persist securely, so that I do not need to log in on every visit.
-9. As a user, I want to sign out from the current device, so that I can protect my account on a shared computer.
-10. As a free member, I want to submit text for AI rewriting, so that I can evaluate the paid feature before subscribing.
-11. As a free member, I want to see my monthly remaining characters, so that I know whether a request can run.
-12. As a free member, I want a clear upgrade prompt when my quota is insufficient, so that I know how to continue.
-13. As a member, I want to select language, tone, audience and rewrite strength, so that the result matches my context.
-14. As a member, I want facts, names, quotes, citations, links and formatting preserved, so that rewriting does not damage the content.
-15. As a member, I want to receive the rewritten text progressively, so that long requests do not feel stalled.
-16. As a member, I want to stop an in-progress rewrite, so that I can correct an accidental submission.
-17. As a member, I want clear retry guidance after a temporary provider failure, so that I do not submit duplicate paid requests.
-18. As a member, I want failed requests not to consume quota, so that I only pay for completed work.
-19. As a member, I want to copy or download the result, so that I can use it outside the product.
-20. As a privacy-conscious user, I want source and result text not to be stored by default, so that sensitive drafts are not retained.
-21. As a user, I want to see the current plan, billing period and quota usage, so that I can manage my account.
-22. As a user, I want to update my display name, so that the account area reflects my identity.
-23. As a user, I want to delete my account, so that I can exercise control over my personal data.
-24. As a free member, I want to start a Pro subscription through a trusted checkout, so that payment details are not entered into the product directly.
-25. As a Pro member, I want paid access activated after checkout, so that I can use the upgraded quota immediately.
-26. As a Pro member, I want to manage payment method, invoices and cancellation through a billing portal, so that billing controls are self-service.
-27. As a Pro member, I want access to remain active until the paid period ends after cancellation, so that I receive what I paid for.
-28. As a Pro member, I want a clear notice when payment fails, so that I can update my payment method.
-29. As a returning subscriber, I want duplicate webhooks not to change my quota twice, so that billing remains consistent.
-30. As an administrator, I want to see active users, paid subscribers, AI requests, token cost and error rate, so that I can monitor product health.
-31. As an administrator, I want to search users by email or user ID, so that I can resolve support requests.
-32. As an administrator, I want to see a user's plan, status and usage metadata without seeing their text, so that support does not compromise privacy.
-33. As an administrator, I want to suspend or restore an account, so that abuse can be controlled.
-34. As an administrator, I want to grant a manual quota adjustment with a reason, so that support corrections are traceable.
-35. As an administrator, I want to inspect subscription and webhook status, so that payment synchronization failures can be diagnosed.
-36. As an administrator, I want every sensitive administrative action audited, so that changes are accountable.
-37. As an administrator, I want requests blocked when a global cost ceiling is reached, so that provider spending cannot run away.
-38. As an operator, I want provider errors categorized separately from product errors, so that incidents can be routed correctly.
-39. As an operator, I want to change non-secret model configuration without exposing the API key, so that routine adjustments are safe.
-40. As a product owner, I want usage and conversion metrics without storing user text, so that product decisions do not require unnecessary content retention.
+1. 作為訪客，我希望無須登入便可在本機清理不可見字符，確保文字不會離開瀏覽器。
+2. 作為訪客，我希望看到偵測到哪些 Unicode 字符，了解工具作出了甚麼修改。
+3. 作為訪客，我希望選擇如何處理長破折號，使輸出符合我的寫作風格。
+4. 作為訪客，我希望網站說明字符清理不能證明內容由 AI 撰寫，避免受到誤導。
+5. 作為訪客，我希望了解 AI 重寫為何需要帳戶，令免費工具轉到會員功能的流程合理清晰。
+6. 作為新用戶，我希望透過電郵 Magic Link 註冊，無須建立另一組密碼。
+7. 作為新用戶，我希望使用 Google 登入，以一步完成註冊。
+8. 作為用戶，我希望登入工作階段可以安全保留，無須每次使用都重新登入。
+9. 作為用戶，我希望可以在目前裝置登出，在共用電腦上保護帳戶。
+10. 作為 Free 會員，我希望提交文字作 AI 重寫，在訂閱前評估付費功能。
+11. 作為 Free 會員，我希望查看每月剩餘字符，知道請求能否執行。
+12. 作為 Free 會員，我希望在配額不足時看到清晰的升級提示，知道如何繼續。
+13. 作為會員，我希望選擇語氣、正式程度及重寫強度，同時保留輸入語言，使結果符合我的使用情境。
+14. 作為會員，我希望保留事實、名稱、引文、引用、連結及格式，避免重寫破壞內容。
+15. 作為會員，我希望逐步接收重寫結果，避免長請求看似停頓。
+16. 作為會員，我希望停止正在進行的重寫，以便修正誤提交的內容。
+17. 作為會員，我希望供應商暫時故障時獲得清晰的重試指引，避免重複提交付費請求。
+18. 作為會員，我希望失敗請求不消耗配額，只為已完成的工作付費。
+19. 作為會員，我希望複製或下載結果，在產品以外使用。
+20. 作為重視私隱的用戶，我希望系統預設不保存原文及結果，避免保留敏感草稿。
+21. 作為用戶，我希望查看目前方案、帳單週期及配額用量，以管理帳戶。
+22. 作為用戶，我希望更新顯示名稱，令帳戶資料反映我的身份。
+23. 作為用戶，我希望刪除帳戶，掌握自己的個人資料。
+24. 作為 Free 會員，我希望透過可信任的 Checkout 開始 Pro 訂閱，無須直接在產品輸入付款資料。
+25. 作為 Pro 會員，我希望 Checkout 完成後立即啟用付費權限，使用升級後的配額。
+26. 作為 Pro 會員，我希望透過帳單 Portal 自助管理付款方式、發票及取消訂閱。
+27. 作為 Pro 會員，我希望取消後仍可使用至已付款週期結束，獲得已付費的服務。
+28. 作為 Pro 會員，我希望付款失敗時收到清晰通知，以更新付款方式。
+29. 作為再次訂閱的用戶，我希望重複 Webhook 不會重複變更配額，確保帳單狀態一致。
+30. 作為管理員，我希望查看活躍用戶、付費訂戶、AI 請求、Token 成本及錯誤率，以監察產品狀況。
+31. 作為管理員，我希望按電郵或 user ID 搜尋用戶，以處理支援個案。
+32. 作為管理員，我希望查看用戶的方案、狀態及用量 metadata，但不能查看文字內容，避免支援工作損害私隱。
+33. 作為管理員，我希望暫停或恢復帳戶，以控制濫用。
+34. 作為管理員，我希望在提供原因後手動調整配額，令支援修正可以追溯。
+35. 作為管理員，我希望檢查訂閱及 Webhook 狀態，以診斷付款同步故障。
+36. 作為管理員，我希望每項敏感管理操作均有審計記錄，確保改動可以問責。
+37. 作為管理員，我希望達到全域成本上限時封鎖請求，避免供應商開支失控。
+38. 作為營運人員，我希望把供應商錯誤與產品錯誤分開分類，以便正確處理事故。
+39. 作為營運人員，我希望在不暴露 API Key 的情況下修改非敏感模型設定，安全完成日常調整。
+40. 作為產品負責人，我希望在不保存用戶文字的情況下取得用量及轉換指標，避免產品決策依賴不必要的內容保留。
 
-## Functional Requirements
+## 功能需求
 
-### Local character tools
+### 本機字符工具
 
-- Detection and cleaning continue to execute entirely in the browser.
-- Results show Unicode code point, display name, count and action taken.
-- Safe cleaning preserves characters with legitimate linguistic or emoji meaning by default.
-- Aggressive cleaning requires an explicit user choice and a warning.
-- Em dash replacement is a style preference, not a watermark claim.
-- Local operations never call membership or AI APIs and never consume quota.
+- 偵測及清理繼續完全在瀏覽器內執行。
+- 結果顯示 Unicode code point、顯示名稱、數量及採取的操作。
+- 安全清理模式預設保留具正當語言或 emoji 用途的字符。
+- 進取清理模式必須由用戶明確選擇，並顯示警告。
+- 替換長破折號只屬風格選項，不代表水印判斷。
+- 本機操作絕不呼叫會員或 AI API，亦不消耗配額。
 
-### Authentication and account
+### 身份驗證及帳戶
 
-- Support email magic link and Google OAuth.
-- Require verified identity before AI rewriting or payment.
-- Provide account overview, current plan, usage, billing status, sign-out and account deletion.
-- Sessions use Supabase Auth tokens; server authorization never trusts a role or plan sent by the browser.
-- Account deletion revokes access immediately, anonymizes product profile data and retains only legally required billing records.
+- 支援電郵 Magic Link 及 Google OAuth。
+- 使用 AI 重寫或付款前，必須完成身份驗證。
+- 提供帳戶總覽、目前方案、用量、帳單狀態、登出及刪除帳戶。
+- 工作階段使用 Supabase Auth Token；伺服器授權絕不信任瀏覽器提交的角色或方案。
+- 刪除帳戶後立即撤銷存取權、匿名化產品 Profile 資料，只保留法律要求的帳單記錄。
 
-### AI rewriting
+### AI 文字重寫
 
-- Accept text, language, tone, audience, rewrite strength and formatting preference.
-- Reject empty input, unsupported options and text exceeding the plan limit.
-- Remove leading/trailing noise before quota calculation without changing internal content.
-- Preserve meaning, facts, named entities, numbers, dates, quotes, citations, links and paragraph structure.
-- Do not promise “human-written”, “undetectable” or guaranteed detector outcomes.
-- Stream output when Responses API streaming is verified; otherwise launch with non-streaming response and retain the same API contract version.
-- Use a unique request ID and idempotency key for each rewrite.
-- Reserve input-character quota atomically before provider invocation.
-- On success, settle actual Token usage and estimated cost.
-- On provider failure, timeout or validated cancellation before useful output, release reserved quota.
-- Do not cache personalized rewriting responses.
-- Do not write source or result text to application logs, analytics or database.
+- 接受文字、allowlist 內的語氣、正式程度（`low`、`medium`、`high`）及重寫強度（`low`、`medium`、`high`）。
+- 自動偵測並保留提交文字的語言；首個版本不提供手動語言選單。
+- 拒絕空白輸入、不支援的選項，以及超出方案上限的文字。
+- 計算配額前移除開首及結尾的無關空白，但不改變內部內容。
+- 保留意思、事實、命名實體、數字、日期、引文、引用、連結及段落結構。
+- 不承諾「由人撰寫」、「無法偵測」，或任何保證通過偵測器的結果。
+- Responses API streaming 通過驗證後才使用串流輸出；否則首發使用非串流回應，並保留相同 API contract 版本。
+- 每次重寫使用唯一 request ID 及 Idempotency Key。
+- 呼叫供應商前，以原子操作預留輸入字符配額。
+- 成功後結算實際 Token 用量及估算成本。
+- 供應商故障、逾時，或產生有效輸出前經驗證的取消操作，均會釋放已預留配額。
+- 不快取個人化重寫回應。
+- 不把原文或結果寫入應用程式日誌、Analytics 或資料庫。
 
-### Membership plans and quota
+### 會員方案及配額
 
-| Capability | Visitor | Free member | Pro member |
+| 功能 | 訪客 | Free 會員 | Pro 會員 |
 | --- | --- | --- | --- |
-| Local character tools | Unlimited | Unlimited | Unlimited |
-| AI rewriting | No | Yes | Yes |
-| Monthly input characters | 0 | 10,000 | 500,000 |
-| Per-request limit | N/A | 3,000 | 20,000 |
-| Billing portal | No | No | Yes |
-| Stored text history | No | No | No |
+| 本機字符工具 | 無限 | 無限 | 無限 |
+| AI 文字重寫 | 否 | 是 | 是 |
+| 每月輸入字符 | 0 | 10,000 | 500,000 |
+| 單次請求上限 | 不適用 | 3,000 | 20,000 |
+| 帳單 Portal | 否 | 否 | 是 |
+| 已保存文字歷史 | 否 | 否 | 否 |
 
-- Free quota resets at 00:00 UTC on the first day of each month.
-- Pro quota follows the Stripe billing period.
-- Unused quota does not roll over.
-- Manual adjustments are separate immutable ledger entries and require an administrator reason.
-- Quota checks and updates must be atomic to prevent concurrent requests from overspending.
+- 表內 10,000／500,000 週期配額仍屬暫定；3,000／20,000 單次上限已確認。
+- Free 配額在每月第一日 00:00 UTC 重設。
+- Pro 配額跟隨 Stripe 帳單週期。
+- 未使用配額不會累積至下一週期。
+- 手動調整使用獨立且不可變的 Ledger entry，並必須提供管理員原因。
+- 配額檢查及更新必須使用原子操作，防止並行請求超額使用。
 
-### Billing
+### 帳單
 
-- Stripe is the billing source of truth; the application database stores synchronized entitlement state.
-- Checkout is created only by an authenticated server endpoint.
-- The client may submit a known plan code but never an arbitrary Stripe Price ID or amount.
-- Webhook signatures must be verified against the raw request body.
-- Webhook event IDs are unique and processed idempotently.
-- Required events include checkout completion, successful invoice, failed invoice, subscription update and subscription deletion.
-- Active and trialing subscriptions receive Pro entitlement.
-- Cancellation at period end retains Pro entitlement until the current period ends.
-- Past-due accounts receive a three-day grace period, then revert to Free if payment remains unresolved.
-- Refunds and disputes are handled in Stripe Dashboard in the first release; entitlement changes still arrive by webhook.
+- Stripe 是帳單資料的唯一真實來源；應用程式資料庫只保存同步後的 entitlement 狀態。
+- Checkout 只可由已驗證身份的伺服器 endpoint 建立。
+- Client 可以提交已知 plan code，但絕不能提交任意 Stripe Price ID 或金額。
+- 必須先以原始 request body 驗證 Webhook signature。
+- Webhook event ID 必須唯一，並以冪等方式處理。
+- 必須處理 Checkout 完成、發票付款成功、發票付款失敗、訂閱更新及訂閱刪除事件。
+- `active` 及 `trialing` 訂閱獲得 Pro entitlement。
+- 在週期結束時取消的訂閱，可保留 Pro entitlement 至目前週期完結。
+- `past_due` 帳戶有三日寬限期；付款仍未解決後降回 Free。
+- 首個版本的退款及爭議在 Stripe Dashboard 處理；entitlement 變更仍由 Webhook 同步。
 
-### Member area
+### 會員專區
 
-- Show profile, current plan, billing status, renewal date and usage progress.
-- Show separate values for base quota, manual adjustments and consumed quota.
-- Provide upgrade, manage billing, sign-out and delete-account commands.
-- Include loading, empty, expired-session, payment-pending and error states.
-- Do not expose provider Token counts as the primary user-facing quota.
+- 顯示 Profile、目前方案、帳單狀態、續期日期及用量進度。
+- 分開顯示基本配額、手動調整及已消耗配額。
+- 提供升級、管理帳單、登出及刪除帳戶操作。
+- 包含載入中、空白、工作階段已過期、付款處理中及錯誤狀態。
+- 不以供應商 Token 數量作為主要用戶配額。
 
-### Administration
+### 後台管理
 
-- Require authenticated `admin` role at both API and database levels.
-- Dashboard metrics: registered users, active users, free/Pro distribution, conversion, request count, success rate, P50/P95 latency, input/output Tokens, estimated provider cost and estimated gross margin.
-- User management: search, view status/plan/usage, suspend, restore and add quota adjustment.
-- Subscription management: view synchronized Stripe IDs, status, period and latest webhook result; billing changes continue through Stripe.
-- Request diagnostics: view request ID, user ID, timestamps, model, character/Token counts, latency, status and sanitized error category.
-- Audit log: administrator, action, target, reason, timestamp and request ID.
-- No administration screen or API may expose submitted or generated text.
+- API 及資料庫層均要求已驗證的 `admin` 角色。
+- Dashboard 指標包括已註冊用戶、活躍用戶、Free／Pro 分佈、轉換率、請求數量、成功率、P50／P95 延遲、input/output Token、供應商估算成本及估算毛利。
+- 用戶管理包括搜尋、查看狀態／方案／用量、暫停、恢復及加入配額調整。
+- 訂閱管理包括查看同步後的 Stripe ID、狀態、週期及最新 Webhook 結果；帳單變更繼續透過 Stripe 處理。
+- 請求診斷包括 request ID、user ID、時間、模型、字符／Token 數量、延遲、狀態及已清理的錯誤分類。
+- 審計日誌記錄管理員、操作、目標、原因、時間及 request ID。
+- 任何後台畫面或 API 均不得顯示用戶提交或生成的文字。
 
-## Implementation Decisions
+## 實施決策
 
-### Architecture
+### 架構
 
-- Retain the existing static frontend and add same-origin Cloudflare Pages Functions for server APIs.
-- Use one catch-all API application with shared middleware for request IDs, authentication, authorization, validation, error normalization and logging.
-- Use TypeScript for all new server code and shared contracts.
-- Use Hono for routing and middleware because the API now has multiple protected routes and shared policies; avoid introducing a larger server framework.
-- Use Zod at the external request boundary.
-- Use Supabase Auth for identity and Supabase Postgres for membership, usage and audit data.
-- Use Postgres functions or transactions for quota reservation, settlement and release.
-- Use Stripe-hosted Checkout and Customer Portal instead of building payment forms.
-- Call EBond directly from Pages Functions. The EBond key is available only as a production Secret.
-- Keep the EBond provider behind a small provider adapter so Responses and Chat Completions can share one internal result shape.
-- Treat Stripe, Supabase and EBond as external trust boundaries and normalize their errors before returning responses.
+- 保留現有靜態前端，加入同源 Cloudflare Pages Functions 作為伺服器 API。
+- 使用一個 catch-all API 應用程式，並共用 request ID、身份驗證、授權、驗證、錯誤標準化及日誌 middleware。
+- 所有新增伺服器程式碼及共用 contract 均使用 TypeScript。
+- API 已有多個受保護 route 及共用政策，因此使用 Hono 處理 routing 及 middleware，避免引入更大型的伺服器 framework。
+- 在外部請求邊界使用 Zod。
+- 使用 Supabase Auth 管理身份，使用 Supabase Postgres 保存會員、用量及審計資料。
+- 使用 Postgres function 或 transaction 預留、結算及釋放配額。
+- 使用 Stripe 託管的 Checkout 及 Customer Portal，不自行建立付款表格。
+- Pages Functions 直接呼叫 EBond；EBond Key 只以 production Secret 形式存在。
+- 把 EBond 供應商封裝於小型 adapter，讓 Responses 及 Chat Completions 共用同一內部結果格式。
+- 把 Stripe、Supabase 及 EBond 視為外部信任邊界，回傳回應前先把其錯誤標準化。
 
-### Request flow
+### 請求流程
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant P as Pages UI
+    participant U as 用戶
+    participant P as Pages 介面
     participant F as Pages Function
     participant D as Supabase
     participant E as EBond API
 
-    U->>P: Submit rewrite
-    P->>F: Authenticated request + idempotency key
-    F->>D: Verify entitlement and reserve quota
-    D-->>F: Reservation confirmed
-    F->>E: gpt-5.5 request
-    E-->>F: Stream/result + usage
-    F->>D: Settle usage and cost
-    F-->>P: Result + remaining quota
+    U->>P: 提交重寫
+    P->>F: 已驗證請求 + Idempotency Key
+    F->>D: 驗證權限並預留配額
+    D-->>F: 確認預留
+    F->>E: gpt-5.5 請求
+    E-->>F: 串流／結果 + usage
+    F->>D: 結算用量及成本
+    F-->>P: 結果 + 剩餘配額
 ```
 
-### Data model
+### 資料模型
 
-| Entity | Purpose | Important fields |
+| 實體 | 用途 | 重要欄位 |
 | --- | --- | --- |
-| Profile | Product account and authorization | user ID, display name, role, status, timestamps |
-| Plan | Server-owned entitlement definition | code, monthly characters, request limit, active flag |
-| Subscription | Stripe synchronization | user ID, customer ID, subscription ID, plan, status, period, cancel flag |
-| Usage period | Current allowance state | user ID, period start/end, base quota, adjustments, reserved, consumed |
-| Usage ledger | Immutable request and adjustment history | request ID, user ID, type, characters, Tokens, cost, status, timestamps |
-| Webhook event | Stripe idempotency | provider event ID, type, processing status, timestamps, sanitized error |
-| Admin audit | Sensitive action history | administrator ID, action, target, reason, request ID, timestamp |
+| Profile | 產品帳戶及授權 | user ID、顯示名稱、角色、狀態、時間 |
+| Plan | 由伺服器擁有的 entitlement 定義 | code、每月字符、請求上限、啟用標記 |
+| Subscription | Stripe 同步 | user ID、customer ID、subscription ID、方案、狀態、週期、取消標記 |
+| Usage period | 目前配額狀態 | user ID、週期開始／結束、基本配額、調整、已預留、已消耗 |
+| Usage ledger | 不可變的請求及調整歷史 | request ID、user ID、類型、字符、Token、成本、狀態、時間 |
+| Webhook event | Stripe 冪等處理 | provider event ID、類型、處理狀態、時間、已清理錯誤 |
+| Admin audit | 敏感操作歷史 | administrator ID、操作、目標、原因、request ID、時間 |
 
-All user-owned tables enable Row Level Security. Members may read only their own profile, subscription summary and usage. They may not write plan, subscription, usage or role fields directly. Service-role operations remain server-only.
+所有用戶擁有的資料表均啟用 Row Level Security。會員只能讀取自己的 Profile、訂閱摘要及用量；不得直接寫入方案、訂閱、用量或角色欄位。Service-role 操作只可在伺服器執行。
 
 ### API contract
 
-| Method and endpoint | Authentication | Purpose |
+| Method 及 endpoint | 身份驗證 | 用途 |
 | --- | --- | --- |
-| `GET /api/v1/account` | Member | Return profile, plan and subscription summary |
-| `GET /api/v1/usage` | Member | Return current period quota and aggregate usage |
-| `POST /api/v1/rewrite` | Member | Validate, reserve quota, call EBond and settle usage |
-| `POST /api/v1/billing/checkout` | Member | Create Stripe Checkout for an allowed plan |
-| `POST /api/v1/billing/portal` | Pro member | Create Stripe Customer Portal session |
-| `POST /api/v1/webhooks/stripe` | Stripe signature | Synchronize billing state idempotently |
-| `POST /api/v1/account/delete` | Member + recent auth | Start account deletion workflow |
-| `GET /api/v1/admin/metrics` | Admin | Return aggregate product and cost metrics |
-| `GET /api/v1/admin/users` | Admin | Search paginated users |
-| `GET /api/v1/admin/users/:id` | Admin | Return user support metadata |
-| `PATCH /api/v1/admin/users/:id/status` | Admin | Suspend or restore account |
-| `POST /api/v1/admin/users/:id/quota-adjustments` | Admin | Add audited quota correction |
+| `GET /api/v1/account` | 會員 | 回傳 Profile、方案及訂閱摘要 |
+| `GET /api/v1/usage` | 會員 | 回傳目前週期配額及彙總用量 |
+| `POST /api/v1/rewrite` | 會員 | 驗證、預留配額、呼叫 EBond 並結算用量 |
+| `POST /api/v1/billing/checkout` | 會員 | 為獲允許方案建立 Stripe Checkout |
+| `POST /api/v1/billing/portal` | Pro 會員 | 建立 Stripe Customer Portal session |
+| `POST /api/v1/webhooks/stripe` | Stripe signature | 以冪等方式同步帳單狀態 |
+| `POST /api/v1/account/delete` | 會員 + 最近驗證 | 開始刪除帳戶流程 |
+| `GET /api/v1/admin/metrics` | 管理員 | 回傳產品及成本彙總指標 |
+| `GET /api/v1/admin/users` | 管理員 | 分頁搜尋用戶 |
+| `GET /api/v1/admin/users/:id` | 管理員 | 回傳用戶支援資料 |
+| `PATCH /api/v1/admin/users/:id/status` | 管理員 | 暫停或恢復帳戶 |
+| `POST /api/v1/admin/users/:id/quota-adjustments` | 管理員 | 加入已審計的配額修正 |
 
-All JSON responses include success status and request ID. Errors also include a stable error code and user-safe message. Expected codes include authentication required, permission denied, validation failed, quota exceeded, account suspended, subscription required, provider unavailable, provider timeout, payment pending and internal error.
+所有 JSON 回應均包含成功狀態及 request ID。錯誤亦包含穩定的 error code 及適合向用戶顯示的訊息。預期錯誤包括需要驗證身份、權限不足、驗證失敗、配額不足、帳戶已暫停、需要訂閱、供應商無法使用、供應商逾時、付款處理中及內部錯誤。
 
-### Privacy and security
+### 私隱及安全
 
-- Never place EBond, Supabase service-role or Stripe secret keys in frontend code, Wrangler plaintext variables, GitHub source or logs.
-- Keep non-secret base URLs, model IDs and public Supabase keys separate from encrypted secrets.
-- Validate JWT signature, issuer, audience and expiry server-side.
-- Enforce RLS even when API authorization already exists.
-- Verify Stripe webhook signature before parsing business fields.
-- Use constant allowlists for plan codes, rewrite options and redirect origins.
-- Apply per-user and per-IP rate limits to AI and billing endpoints.
-- Set maximum request body size before JSON parsing.
-- Redact authorization headers, cookies, submitted text and generated text from logs.
-- Use a global daily provider-cost ceiling and return a controlled unavailable response after the limit is reached.
-- Update privacy and terms pages before enabling AI requests, naming EBond, Supabase, Stripe and Cloudflare as relevant processors or infrastructure providers.
+- 絕不把 EBond、Supabase service-role 或 Stripe Secret Key 放入前端程式碼、Wrangler 明文變數、GitHub 原始碼或日誌。
+- 把非敏感 base URL、model ID 及公開 Supabase Key 與加密 Secret 分開管理。
+- 在伺服器驗證 JWT signature、issuer、audience 及到期時間。
+- 即使 API 已有授權檢查，仍必須執行 RLS。
+- 解析業務欄位前先驗證 Stripe Webhook signature。
+- 為 plan code、重寫選項及 redirect origin 使用固定 allowlist。
+- AI 及帳單 endpoint 同時套用 per-user 及 per-IP rate limit。
+- 解析 JSON 前先限制 request body 大小。
+- 從日誌移除 Authorization header、Cookie、提交文字及生成文字。
+- 設定每日全域供應商成本上限；達到上限後回傳受控的服務暫停回應。
+- 啟用 AI 請求前更新 Privacy 及 Terms 頁面，列明 EBond、Supabase、Stripe 及 Cloudflare 等相關資料處理或基礎設施供應商。
 
-### Observability
-
-- Generate a request ID at the edge and propagate it to database records and provider metadata where safe.
-- Record structured events for authentication failure, validation failure, quota reservation, provider completion, provider failure, billing synchronization and administrator actions.
-- Track latency and cost without storing content.
-- Alert on provider failure rate, webhook backlog, repeated quota settlement failure, cost ceiling and elevated authorization failures.
+### 可觀察性
+
+- 在 edge 產生 request ID，並在安全情況下傳遞至資料庫記錄及供應商 metadata。
+- 為身份驗證失敗、資料驗證失敗、配額預留、供應商完成、供應商故障、帳單同步及管理員操作記錄結構化事件。
+- 追蹤延遲及成本，但不保存內容。
+- 為供應商錯誤率、Webhook backlog、重複配額結算失敗、成本上限及異常授權失敗設定警報。
 
-## Testing Decisions
-
-Tests verify external behavior and trust-boundary contracts rather than private helper implementation.
-
-### Primary test seams
-
-1. Rewrite flow seam: authenticated API request through quota settlement, with EBond replaced by a deterministic mock. This verifies validation, entitlement, idempotency, quota behavior, output contract and sanitized errors in one high-level test surface.
-2. Billing flow seam: signed Stripe webhook through synchronized subscription entitlement, with database state asserted after duplicate and out-of-order events.
-3. Administration seam: role-protected API request through audit creation, verifying both authorization and visible support metadata.
+## 測試決策
+
+測試應驗證外部行為及信任邊界 contract，而不是私人 helper 的內部實作。
+
+### 主要測試邊界
+
+1. 重寫流程邊界：由已驗證 API 請求一直測試至配額結算，並以 deterministic mock 取代 EBond。此高層測試一次驗證資料驗證、entitlement、冪等、配額行為、輸出 contract 及已清理錯誤。
+2. 帳單流程邊界：由已簽署的 Stripe Webhook 一直測試至同步訂閱 entitlement，並在重複及順序錯亂事件後驗證資料庫狀態。
+3. 管理流程邊界：由受角色保護的 API 請求一直測試至審計記錄建立，同時驗證授權及可見的支援資料。
 
-### Required test coverage
+### 必要測試覆蓋
 
-- Local character tests cover every supported Unicode code point, legitimate ZWJ/ZWNJ cases, emoji sequences, safe/aggressive modes and em dash options.
-- API contract tests cover empty, oversized and invalid option inputs.
-- Authentication tests cover missing, expired, malformed and wrong-audience tokens.
-- Quota tests cover exact limit, one character over limit, concurrent reservations, provider failure, cancellation, retry and duplicate idempotency keys.
-- Provider adapter tests cover Responses success/stream, Chat Completions fallback, malformed response, timeout, rate limit and missing usage.
-- Billing tests cover checkout ownership, valid/invalid signatures, duplicate webhooks, out-of-order events, cancellation, past due, grace period and deletion.
-- RLS tests prove users cannot read or modify another user's records and cannot promote themselves.
-- Admin tests prove members receive forbidden responses and every mutation creates an audit entry.
-- E2E tests cover registration, first rewrite, quota display, upgrade, payment-success simulation, billing portal and suspended account.
-- Security checks scan built assets and repository files for secret patterns.
-- Deployment smoke tests verify home, checker, authentication callback, API health and one mocked rewrite path.
-
-Existing code has no automated test suite, so the implementation establishes Vitest for unit/integration tests and Playwright for the few critical browser journeys. External live services are not required for the default test command.
-
-## Detailed Development Steps
-
-The following order is intentional. Each phase must pass its verification gate before the next phase starts. For one experienced full-stack developer, the expected implementation time is approximately 15 to 20 working days, excluding legal review and payment-account approval.
-
-### Phase 0 — Product and contract lock
+- 本機字符測試涵蓋每個支援的 Unicode code point、正當 ZWJ／ZWNJ 用例、emoji 序列、安全／進取模式及長破折號選項。
+- API contract 測試涵蓋空白、過大及無效選項輸入。
+- 身份驗證測試涵蓋缺少、已過期、格式錯誤及 audience 錯誤的 Token。
+- 配額測試涵蓋剛好達上限、超出一個字符、並行預留、供應商故障、取消、重試及重複 Idempotency Key。
+- 供應商 adapter 測試涵蓋 Responses 成功／串流、Chat Completions 回退、格式錯誤回應、逾時、rate limit 及缺少 usage。
+- 帳單測試涵蓋 Checkout 擁有權、有效／無效 signature、重複 Webhook、順序錯亂事件、取消、past due、寬限期及刪除。
+- RLS 測試證明用戶不能讀取或修改其他用戶的記錄，亦不能自行提升權限。
+- Admin 測試證明會員會收到 forbidden 回應，而且每項 mutation 均會建立 audit entry。
+- E2E 測試涵蓋註冊、首次重寫、配額顯示、升級、模擬付款成功、帳單 Portal 及已暫停帳戶。
+- 安全檢查掃描 build assets 及 repository files 內的常見 Secret pattern。
+- 部署 smoke test 驗證首頁、Checker、身份驗證 callback、API health 及一條使用 mock 的重寫路徑。
+
+本 PRD 初稿編寫時，專案尚未有自動測試套件；實施工作建立 Vitest 作單元／整合測試，並以 Playwright 覆蓋少量關鍵瀏覽器流程。預設測試命令不依賴不穩定的外部服務。
+
+## 詳細開發步驟
+
+以下次序是刻意安排。每個 Phase 必須通過驗證關卡，才可進入下一階段。以一名具經驗的 full-stack developer 計算，預計需要約 15 至 20 個工作天，不包括法律審閱及付款帳戶審批時間。
+
+### Phase 0 — 鎖定產品及 contract
 
-Tasks:
-
-- Confirm final product wording: “Invisible Character Cleaner” and “AI Text Rewriter”.
-- Confirm provisional Free and Pro quotas and `US$9/month` price.
-- Confirm international/English launch assumption.
-- Define supported rewrite controls and allowlisted values.
-- Create a 50–100 sample evaluation set containing human, AI-assisted, factual, citation-heavy and formatted text.
-- Define prompt acceptance criteria: meaning preservation, no added facts, no removed citations and acceptable style change.
-
-Verification:
-
-- Product owner approves plan limits, price and claims.
-- Evaluation examples have expected outcomes and contain no production-sensitive data.
-
-### Phase 1 — Engineering foundation
-
-Tasks:
-
-- Add Node package management, TypeScript, formatting, linting and test commands.
-- Add the Pages Functions runtime and one API application entry point.
-- Add shared request ID, JSON response, validation and error middleware.
-- Add an API health endpoint that exposes no secrets.
-- Update continuous deployment to run lint, type checking and tests before Pages deployment.
-- Ensure static clean URLs and existing SEO pages remain unchanged.
-
-Verification:
-
-- Local development serves static pages and the health API together.
-- CI fails on lint, type or test errors.
-- Production build contains no Secret values.
-
-### Phase 2 — Supabase authentication and database
-
-Tasks:
-
-- Create Supabase project environments for development and production.
-- Configure magic link and Google OAuth redirect URLs.
-- Create profile, plan, subscription, usage period, usage ledger, webhook event and admin audit tables.
-- Seed Free and Pro plan definitions.
-- Implement profile creation after first verified sign-in.
-- Enable RLS and minimum grants on all exposed tables.
-- Implement atomic quota reserve, settle and release database operations.
-- Add one administrator account through a controlled database operation.
-
-Verification:
-
-- A user can register, sign in, refresh and sign out.
-- Cross-user reads and writes fail under RLS tests.
-- Concurrent quota reservations cannot exceed the allowance.
-- Browser access cannot modify plan, role, subscription or usage ledger.
-
-### Phase 3 — EBond AI rewrite API
-
-Tasks:
-
-- Implement the EBond provider adapter using `gpt-5.5`.
-- Verify Responses API with the configured production-like development key.
-- Implement Chat Completions fallback only if Responses compatibility fails or is incomplete.
-- Create the versioned rewrite system prompt and input contract.
-- Implement authentication, account-state check, body limit, validation and quota reservation.
-- Implement provider timeout, cancellation, retry policy and normalized errors.
-- Settle Token usage and estimated cost after successful completion.
-- Release reserved quota on eligible failures.
-- Prevent text, authorization and key values from entering logs.
-
-Verification:
-
-- Evaluation set meets the agreed meaning-preservation threshold.
-- Duplicate idempotency keys never produce duplicate charges.
-- Failed provider calls restore quota.
-- Cost calculation matches EBond input/output rates within rounding tolerance.
-- No request or response content appears in logs or database rows.
-
-### Phase 4 — Member-facing experience
-
-Tasks:
-
-- Add sign-in/register experience with magic link and Google.
-- Add account menu and session-expired handling.
-- Add AI rewrite controls, progress, cancellation, error and result states.
-- Keep local cleaning available without login and clearly separate from AI rewriting.
-- Add member area with plan, billing status, period and usage progress.
-- Add copy and download actions for rewrite results.
-- Add upgrade prompts for authentication, request-size and quota limits.
-- Add account deletion confirmation with recent-auth requirement.
-- Complete responsive behavior and keyboard accessibility.
-
-Verification:
-
-- Visitor, Free and Pro flows render only their allowed actions.
-- Long text and long translated labels do not overflow controls.
-- Session expiry does not lose local text before the user chooses to retry.
-- Playwright passes on desktop and mobile viewports.
-
-### Phase 5 — Stripe subscription billing
-
-Tasks:
-
-- Create Stripe Product and monthly Pro Price.
-- Store allowed Price mapping only on the server.
-- Implement authenticated Checkout Session creation.
-- Implement Customer Portal Session creation.
-- Implement raw-body webhook signature verification and event idempotency.
-- Synchronize subscription status, period and Stripe identifiers.
-- Implement cancellation-at-period-end and payment-failure grace behavior.
-- Add payment-pending and payment-failed states in the member area.
-- Configure Stripe test clocks or equivalent test fixtures for lifecycle testing.
-
-Verification:
-
-- Test-mode checkout upgrades the correct user.
-- Replaying a webhook changes state only once.
-- Cancellation retains Pro until period end.
-- Failed payment follows the documented grace-period transition.
-- Browser cannot choose arbitrary prices or redirect domains.
-
-### Phase 6 — Administration
-
-Tasks:
-
-- Add server-side admin-role middleware and database policies.
-- Build overview metrics with date-range filtering.
-- Build paginated user search and user support detail.
-- Add suspend/restore actions with mandatory reason.
-- Add quota adjustments as immutable ledger entries.
-- Add subscription and webhook diagnostic views.
-- Add sanitized request diagnostics and cost aggregation.
-- Record every admin mutation in the audit log.
-
-Verification:
-
-- Non-admin users cannot access any admin data through UI or direct API calls.
-- Admin actions require a reason and produce an audit record.
-- No page or endpoint displays submitted or generated text.
-- Aggregate Token and cost totals reconcile with ledger test fixtures.
-
-### Phase 7 — Security, privacy and resilience
-
-Tasks:
-
-- Add rate limiting to rewrite, checkout, portal and authentication-sensitive endpoints.
-- Add strict body limits, origin checks and security headers.
-- Configure global daily cost ceiling and provider circuit breaker.
-- Test key rotation without code changes.
-- Update privacy, terms and cookie pages for server-side AI and payment processing.
-- Add account deletion and retained-billing-data documentation.
-- Run dependency, secret and authorization scans.
-- Conduct failure drills for EBond outage, Supabase outage and delayed Stripe webhooks.
-
-Verification:
-
-- Secret scan returns no exposed credentials.
-- Abuse tests receive controlled `429` responses.
-- Provider outage does not deduct completed quota incorrectly.
-- Legal pages accurately describe which text leaves the browser and why.
-
-### Phase 8 — Deployment and controlled rollout
-
-Tasks:
-
-- Create separate preview and production configurations and Secrets.
-- Apply database migrations before application deployment.
-- Deploy to preview and run full smoke/E2E suite.
-- Release AI rewriting behind a feature flag to internal accounts first.
-- Enable Free members, observe cost/error metrics, then enable Stripe upgrade.
-- Configure alerts and an operational rollback checklist.
-- Document support procedures for failed payments, quota corrections and account suspension.
-
-Verification:
-
-- Preview and production use different credentials and Stripe modes.
-- Rollback restores the previous application without rolling back completed billing records.
-- Production dashboard shows request success, latency, cost and webhook health.
-- First production billing cycle reconciles Stripe, subscription and usage records.
-
-## Release Acceptance Criteria
-
-- Existing static pages, SEO routes and local checker continue working.
-- Local character cleaning sends no network request.
-- AI rewrite requires a valid member session and enforces plan limits server-side.
-- EBond key and all other secrets exist only in Cloudflare encrypted Secrets.
-- Free and Pro quota reservation is atomic and failures do not consume final quota.
-- Stripe test-mode lifecycle passes checkout, renewal, failure, cancellation and duplicate-event cases.
-- Member area accurately shows plan, period and remaining characters.
-- Admin area is inaccessible to normal members and contains no user text.
-- Privacy and terms pages describe AI processing and billing providers.
-- Lint, type check, unit, integration, E2E and secret scan pass in CI.
-- Production smoke tests and rollback procedure are documented and exercised.
-
-## Out of Scope
-
-- Claims that text is guaranteed to be human-written, undetectable or free of an AI watermark.
-- Automated academic-integrity evasion or detector-specific optimization.
-- Stored rewrite history, document collaboration or cloud file storage.
-- Team workspaces, organization billing, seats or role hierarchies beyond member/admin.
-- Annual plans, lifetime plans, prepaid Token packs, coupons or referrals.
-- China mainland payment providers, multi-currency taxation or automated refund workflows.
-- Public developer API, API key management or third-party integrations.
-- Mobile applications or browser extensions.
-- Dynamic prompt editing from the admin UI.
-- Multiple production AI models exposed as a user-selectable setting.
-
-## Risks and Mitigations
-
-| Risk | Mitigation |
+工作：
+
+- 確認最終產品用語：「Invisible Character Cleaner」及「AI Text Rewriter」。
+- 確認暫定的 Free／Pro 月度配額及 `US$9/month` 價格；3,000／20,000 單次上限已鎖定。
+- 記錄 US／English 首發決定、`watermarklens.com` 網域及 `contact@watermarklens.com` 聯絡地址。
+- 確認語氣 allowlist；正式程度及重寫強度使用 `low`、`medium`、`high`，語言自動跟隨輸入。
+- 建立 50 至 100 個評測樣本，涵蓋人手撰寫、AI 輔助、事實密集、引用密集及含格式文字。
+- 定義 Prompt 驗收準則：保留意思、不新增事實、不移除引用，以及達到可接受的風格改動。
+
+驗證：
+
+- 產品負責人批准方案上限、價格及產品聲明。
+- 評測樣本有預期結果，而且不含 production 敏感資料。
+
+### Phase 1 — 工程基礎
+
+工作：
+
+- 加入 Node package management、TypeScript、format、lint 及 test 命令。
+- 加入 Pages Functions runtime 及一個 API 應用程式入口。
+- 加入共用 request ID、JSON response、validation 及 error middleware。
+- 加入不暴露 Secret 的 API health endpoint。
+- 更新持續部署流程，在 Pages 部署前執行 lint、type check 及 test。
+- 確保現有靜態 clean URL 及 SEO 頁面維持不變。
+
+驗證：
+
+- 本機開發環境同時提供靜態頁面及 health API。
+- lint、type 或 test 出錯時，CI 必須失敗。
+- Production build 不含任何 Secret 值。
+
+### Phase 2 — Supabase 身份驗證及資料庫
+
+工作：
+
+- 建立 development 及 production Supabase 專案環境。
+- 配置 Magic Link 及 Google OAuth redirect URL。
+- 建立 Profile、Plan、Subscription、Usage Period、Usage Ledger、Webhook Event 及 Admin Audit 資料表。
+- Seed Free 及 Pro 方案定義。
+- 實作首次完成驗證登入後建立 Profile。
+- 在所有公開資料表啟用 RLS 及最小權限 grant。
+- 實作原子配額 reserve、settle 及 release 資料庫操作。
+- 透過受控資料庫操作加入一個管理員帳戶。
+
+驗證：
+
+- 用戶可以註冊、登入、refresh session 及登出。
+- RLS 測試確認跨用戶讀寫會失敗。
+- 並行配額預留不能超出 allowance。
+- 瀏覽器不能修改方案、角色、訂閱或 Usage Ledger。
+
+### Phase 3 — EBond AI 重寫 API
+
+工作：
+
+- 使用 `gpt-5.5` 實作 EBond provider adapter。
+- 使用已配置、接近 production 的 development Key 驗證 Responses API。
+- 只有 Responses 相容性失敗或不完整時，才實作 Chat Completions 回退。
+- 建立有版本的重寫 system prompt 及 input contract。
+- 實作身份驗證、帳戶狀態檢查、body limit、validation 及配額預留。
+- 實作供應商 timeout、取消、重試政策及標準化錯誤。
+- 成功完成後結算 Token 用量及估算成本。
+- 符合條件的失敗會釋放已預留配額。
+- 防止文字、Authorization 及 Key 值進入日誌。
+
+驗證：
+
+- 評測集達到已同意的意思保留門檻。
+- 重複 Idempotency Key 絕不產生重複收費。
+- 供應商呼叫失敗後恢復配額。
+- 成本計算在 rounding tolerance 內符合 EBond input/output 費率。
+- 日誌及資料庫記錄不含 request 或 response 內容。
+
+### Phase 4 — 會員介面
+
+工作：
+
+- 加入使用 Magic Link 及 Google 的登入／註冊體驗。
+- 加入帳戶 menu 及 session 過期處理。
+- 加入語氣下拉選單、低／中／高正式程度及重寫強度控制，以及進度、取消、錯誤及結果狀態。
+- 自動保留輸入語言，不提供手動語言選單。
+- 本機清理無須登入即可使用，並與 AI 重寫清晰分開。
+- 加入會員專區，顯示方案、帳單狀態、週期及用量進度。
+- 加入複製及下載重寫結果操作。
+- 為身份驗證、請求大小及配額上限加入升級提示。
+- 加入要求最近驗證的刪除帳戶確認。
+- 完成 responsive layout 及鍵盤無障礙操作。
+
+驗證：
+
+- 訪客、Free 及 Pro 流程只顯示其獲允許的操作。
+- 長文字及長翻譯標籤不會溢出控制項。
+- Session 過期時，在用戶選擇重試前不會遺失本機文字。
+- Playwright 在桌面及流動裝置 viewport 通過。
+
+### Phase 5 — Stripe 訂閱帳單
+
+工作：
+
+- 建立 Stripe Product 及每月 Pro Price。
+- 只在伺服器保存獲允許的 Price mapping。
+- 實作已驗證身份的 Checkout Session 建立。
+- 實作 Customer Portal Session 建立。
+- 實作 raw-body Webhook signature 驗證及 event 冪等處理。
+- 同步訂閱狀態、週期及 Stripe identifier。
+- 實作週期結束取消及付款失敗寬限期行為。
+- 在會員專區加入付款處理中及付款失敗狀態。
+- 配置 Stripe test clock 或同等 test fixture，測試完整生命週期。
+
+驗證：
+
+- Test mode Checkout 升級正確用戶。
+- 重播同一 Webhook 只改變狀態一次。
+- 取消後保留 Pro 至週期完結。
+- 付款失敗按已記錄的寬限期轉換。
+- 瀏覽器不能選擇任意價格或 redirect domain。
+
+### Phase 6 — 後台管理
+
+工作：
+
+- 加入伺服器端 admin role middleware 及資料庫 policy。
+- 建立支援日期範圍篩選的總覽指標。
+- 建立分頁用戶搜尋及用戶支援詳情。
+- 加入必須提供原因的暫停／恢復操作。
+- 以不可變 Ledger entry 加入配額調整。
+- 加入訂閱及 Webhook 診斷畫面。
+- 加入已清理的請求診斷及成本彙總。
+- 在 Audit Log 記錄每項 Admin mutation。
+
+驗證：
+
+- 非 Admin 用戶不能透過介面或直接 API 呼叫存取任何 Admin 資料。
+- Admin 操作必須提供原因，並產生 Audit Record。
+- 任何頁面或 endpoint 均不顯示提交或生成的文字。
+- Token 及成本彙總與 Ledger test fixture 一致。
+
+### Phase 7 — 安全、私隱及韌性
+
+工作：
+
+- 為重寫、Checkout、Portal 及身份驗證敏感 endpoint 加入 rate limit。
+- 加入嚴格 body limit、origin 檢查及 security header。
+- 配置每日全域成本上限及供應商 circuit breaker。
+- 測試無須修改程式碼的 Key rotation。
+- 更新 Privacy、Terms 及 Cookie 頁面，說明伺服器端 AI 及付款處理。
+- 加入帳戶刪除及保留帳單資料說明。
+- 執行 dependency、Secret 及 authorization scan。
+- 為 EBond 故障、Supabase 故障及 Stripe Webhook 延遲進行故障演練。
+
+驗證：
+
+- Secret scan 不發現外洩 credential。
+- 濫用測試收到受控的 `429` 回應。
+- 供應商故障不會錯誤扣除已完成配額。
+- 法律頁面準確說明哪些文字會離開瀏覽器及其原因。
+
+### Phase 8 — 部署及受控推出
+
+工作：
+
+- 建立分開的 preview／production 配置及 Secret。
+- 應用程式部署前先套用 database migration。
+- 部署至 preview，並執行完整 smoke／E2E suite。
+- 首先透過 feature flag 向內部帳戶開放 AI 重寫。
+- 開放 Free 會員後觀察成本／錯誤指標，再開放 Stripe 升級。
+- 配置警報及營運 rollback checklist。
+- 記錄付款失敗、配額修正及帳戶暫停的支援程序。
+
+驗證：
+
+- Preview 及 production 使用不同 credential 及 Stripe mode。
+- Rollback 可恢復上一版本應用程式，而不回滾已完成帳單記錄。
+- Production Dashboard 顯示請求成功率、延遲、成本及 Webhook 健康狀態。
+- 第一個 production 帳單週期能對帳 Stripe、Subscription 及 Usage Record。
+
+## 發佈驗收準則
+
+- 現有靜態頁面、SEO route 及本機 Checker 繼續正常運作。
+- 本機字符清理不發出任何網絡請求。
+- AI 重寫要求有效會員 session，並在伺服器執行方案上限。
+- EBond Key 及所有其他 Secret 只存在於 Cloudflare 加密 Secret。
+- Free 及 Pro 配額預留使用原子操作，失敗不會消耗最終配額。
+- Stripe test mode 生命週期通過 Checkout、續期、失敗、取消及重複 event 測試。
+- 會員專區準確顯示方案、週期及剩餘字符。
+- 一般會員不能存取 Admin Area，而且當中不含用戶文字。
+- Privacy 及 Terms 頁面說明 AI 處理及帳單供應商。
+- Lint、type check、unit、integration、E2E 及 Secret scan 在 CI 通過。
+- Production smoke test 及 rollback 程序已有記錄並完成演練。
+
+## 不在範圍內
+
+- 聲稱文字保證由人撰寫、無法偵測或不含 AI 水印。
+- 自動規避學術誠信要求，或針對特定偵測器優化。
+- 保存重寫歷史、文件協作或雲端檔案儲存。
+- 團隊 Workspace、機構帳單、Seat，或超出 Member／Admin 的角色階層。
+- 年度方案、終身方案、預付 Token 套裝、優惠券或推薦計劃。
+- 中國內地付款供應商、多貨幣稅務或自動退款流程。
+- 公開 Developer API、API Key 管理或第三方 integration。
+- 流動應用程式或瀏覽器 extension。
+- 從 Admin UI 動態編輯 Prompt。
+- 讓用戶在多個 production AI 模型之間選擇。
+
+## 風險及緩解措施
+
+| 風險 | 緩解措施 |
 | --- | --- |
-| EBond is a third-party relay | Keep provider adapter, strict timeout, cost ceiling and documented fallback path |
-| Model changes facts during rewriting | Strong preservation prompt, evaluation set, conservative defaults and user disclaimer |
-| Concurrent requests overspend quota | Atomic reservation and immutable ledger |
-| Stripe events arrive late or out of order | Idempotent event table and state transition rules based on provider timestamps |
-| Admin account compromise | Separate role checks, optional MFA and complete mutation audit |
-| Sensitive text appears in telemetry | Content-free structured logging and automated log assertions |
-| Product claims exceed technical evidence | Use “cleaner” and “rewriter” wording; prohibit detector guarantees |
-| Static deployment pipeline omits Functions | Add API health smoke test and verify Functions artifact during CI |
+| EBond 是第三方轉接服務 | 保留 provider adapter、嚴格 timeout、成本上限及已記錄回退路徑 |
+| 模型在重寫時改變事實 | 使用嚴格保留 Prompt、評測集、保守預設值及用戶免責聲明 |
+| 並行請求超額使用配額 | 使用原子預留及不可變 Ledger |
+| Stripe event 延遲或次序錯亂 | 使用冪等 event table，並按供應商時間制定狀態轉換規則 |
+| Admin 帳戶被入侵 | 分開角色檢查、可選 MFA 及完整 mutation audit |
+| 敏感文字進入 telemetry | 使用不含內容的結構化日誌及自動 log assertion |
+| 產品聲明超出技術證據 | 使用「Cleaner」及「Rewriter」用語，禁止偵測器保證 |
+| 靜態部署流程遺漏 Functions | 加入 API health smoke test，並在 CI 驗證 Functions artifact |
 
-## Further Notes
+## 補充說明
 
-- The repository currently has no automated test framework, package manifest, Supabase schema or Pages Functions source. These are implementation deliverables, not existing capabilities.
-- Production currently has `EBOND_API_KEY` configured and Wrangler can confirm the encrypted binding without revealing its value.
-- The previous architectural suggestion of a separate API Worker is superseded for the MVP by same-project Pages Functions because the Secret and deployment already belong to the Pages project. A separate Worker remains a future scaling option, not a launch requirement.
-- Before implementation begins, the only product decisions still requiring confirmation are the final Pro price, quotas and launch market. The technical plan does not otherwise depend on unresolved architecture choices.
+- 本 PRD 初稿編寫時，repository 尚未有自動測試 framework、package manifest、Supabase schema 或 Pages Functions source；這些均屬實施交付項目，而不是當時已有功能。
+- Production 已配置 `EBOND_API_KEY`，Wrangler 可以確認加密 binding 而不顯示其值。
+- MVP 已用同一 Pages 專案的 Pages Functions 取代先前建議的獨立 API Worker，因為 Secret 及部署已屬於 Pages 專案。獨立 Worker 可保留作未來擴展選項，但不是首發要求。
+- 首發市場已確認為 US／English。仍待確認的產品決策包括 Pro 正式價格、Free／Pro 月度配額及語氣 allowlist；技術方案不再依賴其他未解決的架構選擇。

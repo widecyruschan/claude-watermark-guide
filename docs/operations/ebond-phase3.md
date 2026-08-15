@@ -66,6 +66,8 @@ REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
 
 ## 2026-08-16 聯調狀態
 
-Supabase development/production 的 claim、settle、release、RLS 與重複 Key 測試均通過。Cloudflare production 已配置兩個加密 Secret。
+Supabase development/production 的 claim、settle、release、RLS 與重複 Key 測試均通過。Cloudflare Pages production 已配置 `EBOND_API_KEY` 及 `SUPABASE_SERVICE_ROLE_KEY` 兩個加密 Secret；EBond 公開設定統一為 `https://api.ebondai.com`、`gpt-5.5` 及 `responses`。
 
-Cloudflare remote probe 在沒有 Key 及使用明顯無效 ASCII Key 時，均能從 EBond `/v1/models` 取得 HTTP 401，證明 Workers 到公開主機的網路可達。production Key 對 `/v1/models`、Responses 與顯式 Chat Completions 均在 EBond 端未返回 HTTP 狀態；Key 已通過 HTTP Header 字元格式驗證。production 保持 `responses`，失敗請求會釋放額度且重複 Key 不會再次計費。需由 EBond 檢查該 Key/帳戶及 `gpt-5.5` 上游路由後重跑評測。
+更新 production Secret 後，以不記錄 Key、請求文字或回應內容的最小直連檢查驗證：`GET /v1/models` 返回 HTTP 200 並包含 `gpt-5.5`；`POST /v1/responses` 返回 HTTP 200，且回應包含完整 input/output Token usage。這表示新 Key、帳戶權限、Responses 相容性及模型路由均可用，先前 Key 無上游 HTTP 狀態的問題已不再重現。
+
+本次維護沒有使用真實會員 JWT 呼叫 production `POST /api/v1/rewrite`，因此 Cloudflare Pages、Supabase 配額及 EBond 的完整 production 端到端流程仍須由下一個受控會員請求確認。production 保持 `responses`；失敗請求會釋放額度，重複 Idempotency Key 不會再次計費。

@@ -13,7 +13,19 @@ const wranglerExecutable = resolve(
 );
 const server = spawn(
   wranglerExecutable,
-  ['pages', 'dev', 'dist', '--ip', '127.0.0.1', '--port', String(port)],
+  [
+    'pages',
+    'dev',
+    'dist',
+    '--ip',
+    '127.0.0.1',
+    '--port',
+    String(port),
+    '--binding',
+    'SUPABASE_URL=https://project-ref.supabase.co',
+    '--binding',
+    'SUPABASE_PUBLISHABLE_KEY=sb_publishable_smoke-test-key-fixture',
+  ],
   {
     cwd: projectRoot,
     env: {
@@ -75,6 +87,10 @@ try {
   await waitForServer();
   await verifyResponse('/', "Claude's Invisible Text Watermark");
   await verifyResponse('/checker', 'Claude Watermark Self-Check');
+  await verifyResponse('/login', 'Sign in to Watermark Lens');
+  await verifyResponse('/account', 'Your account');
+  await verifyResponse('/auth/callback', 'Completing sign-in');
+  await verifyResponse('/js/auth.js', 'exchangeCodeForSession');
 
   const healthResponse = await fetch(`${baseUrl}/api/v1/health`);
   const healthBody = await healthResponse.json();
@@ -88,7 +104,24 @@ try {
     'Health request ID header did not match the response body.',
   );
 
-  console.log('Pages smoke test passed (home, checker, and API health).');
+  const authConfigResponse = await fetch(`${baseUrl}/api/v1/auth/config`);
+  const authConfigBody = await authConfigResponse.json();
+
+  assert(authConfigResponse.status === 200, 'Auth config endpoint did not return 200.');
+  assert(
+    authConfigBody.data?.supabaseUrl === 'https://project-ref.supabase.co',
+    'Auth config did not return the expected Supabase URL.',
+  );
+  assert(
+    authConfigBody.data?.supabasePublishableKey === 'sb_publishable_smoke-test-key-fixture',
+    'Auth config did not return the expected publishable key.',
+  );
+  assert(
+    !JSON.stringify(authConfigBody).includes('SERVICE_ROLE'),
+    'Auth config exposed a server-only key name.',
+  );
+
+  console.log('Pages smoke test passed (public pages, member auth routes, and API health).');
 } finally {
   server.kill('SIGTERM');
   await Promise.race([

@@ -18,6 +18,7 @@ export interface ApiBindings {
   EBOND_API_MODE?: string;
   EBOND_BASE_URL: string;
   EBOND_MODEL: string;
+  SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUPABASE_URL: string;
 }
@@ -38,6 +39,7 @@ export interface ApiEnvironment {
 export const API_ERROR_CODE = {
   accountNotInitialized: 'ACCOUNT_NOT_INITIALIZED',
   accountSuspended: 'ACCOUNT_SUSPENDED',
+  authConfigurationError: 'AUTH_CONFIGURATION_ERROR',
   authenticationRequired: 'AUTHENTICATION_REQUIRED',
   databaseUnavailable: 'DATABASE_UNAVAILABLE',
   idempotencyAlreadyCompleted: 'IDEMPOTENCY_ALREADY_COMPLETED',
@@ -59,6 +61,14 @@ export const API_ERROR_CODE = {
   requestLimitExceeded: 'REQUEST_LIMIT_EXCEEDED',
   validationFailed: 'VALIDATION_FAILED',
 } as const;
+
+const publicAuthConfigSchema = z.object({
+  supabasePublishableKey: z.string().startsWith('sb_publishable_').min(30),
+  supabaseUrl: z.url().refine((value) => {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname.endsWith('.supabase.co');
+  }),
+});
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];
 
@@ -200,6 +210,24 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       status: 'ok',
     }),
   );
+  app.get('/api/v1/auth/config', (context) => {
+    const config = publicAuthConfigSchema.safeParse({
+      supabasePublishableKey: context.env.SUPABASE_PUBLISHABLE_KEY,
+      supabaseUrl: context.env.SUPABASE_URL,
+    });
+
+    if (!config.success) {
+      throw new ApiError(
+        503,
+        API_ERROR_CODE.authConfigurationError,
+        'Authentication is temporarily unavailable.',
+        'Contact support before retrying sign-in.',
+      );
+    }
+
+    context.header('cache-control', 'public, max-age=300');
+    return successResponse(context, 'The authentication configuration is available.', config.data);
+  });
   app.post(
     '/api/v1/rewrite',
     bodyLimit({

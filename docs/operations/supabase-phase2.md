@@ -46,7 +46,51 @@ https://eazbgamyvkzzrnichqqw.supabase.co/auth/v1/callback
 https://oyxdensbufzdzgmfuhyd.supabase.co/auth/v1/callback
 ```
 
-再把 Client ID 與 Client Secret 分別寫入 Supabase dev/prod 的 Auth Provider Secret，不得寫入此文件或 `config.toml`。啟用後應分別測試 localhost、Pages preview 與正式域名跳轉。
+本機變數模板已建立於被 Git 忽略的 `.env.local`：
+
+```text
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=
+```
+
+填入本機值後，在啟動 Supabase 前把變數載入目前 shell：
+
+```bash
+set -a
+source .env.local
+set +a
+npx supabase start
+```
+
+Hosted development 及 production 專案不會讀取本機 `.env.local`。必須分別前往 Supabase Dashboard 的 Authentication → Providers → Google，填入相同欄位：
+
+| Supabase 欄位 | 本機變數 |
+| --- | --- |
+| Client ID | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` |
+| Client Secret | `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` |
+
+完成後啟用 Google Provider，並分別測試 localhost、Pages preview 及正式網域跳轉。Client Secret 不得加入 Cloudflare Pages、前端程式碼、此文件或 `supabase/config.toml`。
+
+### 網站登入流程
+
+網站使用 Supabase JS PKCE 流程：
+
+1. `/login` 從 `GET /api/v1/auth/config` 取得 Supabase URL 及 publishable key。
+2. 用戶按 Google 登入後，Supabase 把 PKCE verifier 保存在瀏覽器 storage，並跳轉 Google。
+3. Google 驗證完成後返回 `/auth/callback`；頁面以 `exchangeCodeForSession` 建立 Supabase session。
+4. 成功後清除 callback URL 參數並跳轉 `/account`。
+5. `/account` 恢復及自動 refresh session，顯示 Profile、有效方案、帳單狀態、目前週期及剩餘字符；`SIGNED_OUT` 或 refresh 後無 session 會返回 `/login`。
+
+Pages Functions 需要以下 binding：
+
+```text
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+```
+
+`SUPABASE_PUBLISHABLE_KEY` 按 Supabase 設計可公開給瀏覽器，但專案仍透過 Cloudflare binding 及被 Git 忽略的 `.dev.vars` 注入，不寫入原始碼。公開配置 endpoint 會驗證 URL 及 key 格式，配置缺失時回傳標準化 HTTP 503。
+
+Google Client ID／Secret 只由 Supabase Auth 使用。Cloudflare production 目前仍存在兩個舊的 `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`／`SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` binding；應在取得產品負責人明確批准後刪除，以縮小 Secret 存放範圍。應用程式不讀取或輸出這兩個 binding。
 
 ## 本機驗證
 
