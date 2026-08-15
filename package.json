@@ -9,11 +9,13 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "npm run build && wrangler pages dev dist",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run scan:secrets && npm run test:smoke",
     "format": "prettier --write package.json tsconfig.json eslint.config.js vitest.config.ts functions src tests scripts .github/workflows/deploy.yml",
     "format:check": "prettier --check package.json tsconfig.json eslint.config.js vitest.config.ts functions src tests scripts .github/workflows/deploy.yml",
     "lint": "eslint functions src tests scripts eslint.config.js vitest.config.ts",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
     "test": "vitest run",
+    "test:smoke": "node scripts/smoke.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
@@ -26,6 +28,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.2.0",
     "eslint": "^10.8.1",
+    "globals": "^17.11.0",
     "prettier": "^3.9.6",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",

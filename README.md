@@ -1,9 +1,9 @@
 # Claude Watermark Guide — Static Site
 
 Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物）。
-静态前端 + Cloudflare Pages Functions API，Cloudflare Pages 兼容。
+靜態前端 + Cloudflare Pages Functions API，Cloudflare Pages 兼容。
 
-## 技术栈
+## 技術棧
 - 原生 HTML / CSS / JavaScript
 - Cloudflare Pages / Pages Functions / Wrangler
 - TypeScript / Hono / Zod
@@ -19,9 +19,9 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `css/style.css`             設計系統 token（IBM Plex / 單藍 accent / 4px 圓角）
 - `js/checker.js`             客戶端啟發式（無 API、無上傳）
 - `functions/api/[[route]].ts` Pages Functions API 入口
-- `src/api/app.ts`            Hono API、请求 ID、验证与错误合同
-- `tests/api/`                API 行为测试
-- `scripts/build.mjs`         静态资源构建与页面扁平化
+- `src/api/app.ts`            Hono API、請求 ID、驗證與錯誤合約
+- `tests/api/`                API 行為測試
+- `scripts/build.mjs`         靜態資源建置與頁面扁平化
 - `docs/prd/backend-membership-prd.md` 後台、會員、訂閱與管理功能 PRD
 - `sitemap.xml` / `robots.txt` SEO 索引
 
@@ -34,9 +34,8 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 ## 部署到 Cloudflare Pages
 1. 使用 Node.js 22 安裝依賴：`npm ci`
 2. 執行完整檢查：`npm run check`
-3. 建置部署目錄：`npm run build`
-4. CLI 部署：`npx wrangler pages deploy dist --project-name claude-watermark-guide`
-5. 綁定自訂域 + 替換 `[DOMAIN]`
+3. CLI 部署：`npx wrangler pages deploy dist --project-name claude-watermark-guide`
+4. 綁定自訂域 + 替換 `[DOMAIN]`
 
 ## 本地預覽
 ```bash
@@ -44,16 +43,18 @@ npm install
 npm run dev
 ```
 
-Wrangler 默认在 `http://localhost:8788` 启动静态站与 Pages Functions。API 健康检查为 `GET /api/v1/health`。
+Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。API 健康檢查為 `GET /api/v1/health`。
 
 ## 工程命令
-- `npm run build`：生成扁平化的 `dist/` 静态资源
-- `npm run dev`：构建并启动 Pages 本地运行时
-- `npm run format:check`：检查新增工程文件格式
-- `npm run lint`：检查 TypeScript 与构建脚本
-- `npm run typecheck`：执行 TypeScript 严格类型检查
-- `npm test`：运行 Vitest 行为测试
-- `npm run check`：依次运行格式、Lint、类型与测试检查
+- `npm run build`：產生扁平化的 `dist/` 靜態資源
+- `npm run dev`：建置並啟動 Pages 本機執行環境
+- `npm run format:check`：檢查新增工程檔案格式
+- `npm run lint`：檢查 TypeScript 與建置腳本
+- `npm run typecheck`：執行 TypeScript 嚴格型別檢查
+- `npm test`：執行 Vitest 行為測試
+- `npm run scan:secrets`：掃描原始碼與部署產物的常見密鑰格式
+- `npm run test:smoke`：驗證首頁、工具頁與 Pages Functions 健康檢查
+- `npm run check`：執行格式、Lint、型別、測試、建置、密鑰掃描與 smoke test
 
 ## 合規紅線（PRD NOT-DO / 禁詞）
 - 不聲稱官方合作 / 100% 準確 / 永久免費 / 無限
@@ -109,10 +110,10 @@ Wrangler 默认在 `http://localhost:8788` 启动静态站与 Pages Functions。
 - 新增或修改文件：新增 `docs/prd/backend-membership-prd.md`；更新本 README；GitHub 新增 `ready-for-agent` 标签与 PRD Issue #1。
 - 后续建议：从 PRD Phase 0 锁定正式价格、额度和首发市场，然后按阶段顺序实施，每阶段通过验证门槛后再进入下一阶段。
 
-### 2026-08-15：完成 Phase 1 工程基础
-- 会话主要目的：建立后续后台与会员功能可持续开发、测试和部署的工程基础。
-- 完成的主要任务：加入 Node.js 22、TypeScript、Hono、Zod、Vitest、ESLint 和 Prettier；建立 Pages Functions API 入口、健康检查、请求 ID、JSON 验证及统一错误合同；统一本地与 CI 构建流程。
-- 关键决策和解决方案：保持现有静态前端不变；新 API 使用同项目 Pages Functions；测试以 HTTP API 外部行为为边界；CI 在部署前强制执行格式、Lint、类型和测试检查。
-- 使用的技术栈：Node.js 22、TypeScript、Cloudflare Pages Functions、Hono、Zod、Vitest、ESLint、Prettier、Wrangler。
-- 新增或修改文件：新增 package 工具链、构建脚本、Functions 入口、API 应用与行为测试；更新部署工作流、README 和 lockfile。
-- 后续建议：进入 Phase 2，建立 Supabase 开发/生产环境、认证、会员数据表、RLS 与原子额度操作。
+### 2026-08-15：完成 Phase 1 工程基礎
+- 會話主要目的：建立後續後台與會員功能可持續開發、測試和部署的工程基礎。
+- 完成的主要任務：加入 Node.js 22、TypeScript、Hono、Zod、Vitest、ESLint 和 Prettier；建立 Pages Functions API 入口、健康檢查、請求 ID、JSON 驗證及統一錯誤合約；統一本機與 CI 建置流程。
+- 關鍵決策和解決方案：保持現有靜態前端不變；新 API 使用同一 Pages 專案的 Functions；測試以 HTTP API 外部行為為邊界；CI 在部署前強制執行格式、Lint、型別、測試、密鑰掃描與 Pages smoke test。
+- 使用的技術棧：Node.js 22、TypeScript、Cloudflare Pages Functions、Hono、Zod、Vitest、ESLint、Prettier、Wrangler。
+- 新增或修改檔案：新增 package 工具鏈、建置與安全腳本、Functions 入口、API 應用與行為測試；更新部署工作流程、README 和 lockfile。
+- 後續建議：進入 Phase 2，建立 Supabase 開發/正式環境、認證、會員資料表、RLS 與原子額度操作。

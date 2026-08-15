@@ -1,4 +1,5 @@
 import eslint from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -7,6 +8,12 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['**/*.js', '**/*.mjs', 'vitest.config.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
   {
     files: ['**/*.ts'],
     languageOptions: {

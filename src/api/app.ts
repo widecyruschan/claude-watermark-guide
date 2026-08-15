@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodType } from 'zod';
@@ -19,6 +19,32 @@ export interface ApiEnvironment {
   Variables: ApiVariables;
 }
 
+export const API_ERROR_CODE = {
+  internalError: 'INTERNAL_ERROR',
+  invalidJson: 'INVALID_JSON',
+  notFound: 'NOT_FOUND',
+  validationFailed: 'VALIDATION_FAILED',
+} as const;
+
+export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];
+
+export interface ApiSuccessResponse<T> {
+  success: true;
+  message: string;
+  data: T;
+  requestId: string;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  error: {
+    code: ApiErrorCode;
+    details: string;
+  };
+  requestId: string;
+}
+
 const requestIdMiddleware = createMiddleware<ApiEnvironment>(async (context, next) => {
   const requestId = crypto.randomUUID();
 
@@ -30,12 +56,56 @@ const requestIdMiddleware = createMiddleware<ApiEnvironment>(async (context, nex
 class ApiError extends Error {
   constructor(
     readonly status: ContentfulStatusCode,
-    readonly code: string,
+    readonly code: ApiErrorCode,
     message: string,
+    readonly details: string,
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+export function successResponse<T>(
+  context: Context<ApiEnvironment>,
+  message: string,
+  data: T,
+  status: ContentfulStatusCode = 200,
+) {
+  const responseBody: ApiSuccessResponse<T> = {
+    success: true,
+    message,
+    data,
+    requestId: context.get('requestId'),
+  };
+
+  return context.json(responseBody, status);
+}
+
+function errorResponse(context: Context<ApiEnvironment>, error: ApiError) {
+  const requestId = context.get('requestId');
+  const responseBody: ApiErrorResponse = {
+    success: false,
+    message: error.message,
+    error: {
+      code: error.code,
+      details: error.details,
+    },
+    requestId,
+  };
+
+  context.header('x-request-id', requestId);
+  return context.json(responseBody, error.status);
+}
+
+function logUnhandledError(error: Error, requestId: string) {
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      event: 'unhandled_api_error',
+      requestId,
+      errorName: error.name,
+    }),
+  );
 }
 
 export function validateJsonBody(schema: ZodType) {
@@ -45,13 +115,23 @@ export function validateJsonBody(schema: ZodType) {
     try {
       body = await context.req.json();
     } catch {
-      throw new ApiError(400, 'INVALID_JSON', 'The request body must contain valid JSON.');
+      throw new ApiError(
+        400,
+        API_ERROR_CODE.invalidJson,
+        'The request body is invalid.',
+        'Provide a valid JSON document and try again.',
+      );
     }
 
     const validationResult = schema.safeParse(body);
 
     if (!validationResult.success) {
-      throw new ApiError(422, 'VALIDATION_FAILED', 'The request payload is invalid.');
+      throw new ApiError(
+        422,
+        API_ERROR_CODE.validationFailed,
+        'The request payload is invalid.',
+        'Check the submitted fields and try again.',
+      );
     }
 
     context.set('validatedBody', validationResult.data);
@@ -64,46 +144,38 @@ export function createApiApp() {
 
   app.use('*', requestIdMiddleware);
   app.get('/api/v1/health', (context) =>
-    context.json({
-      success: true,
-      data: {
-        service: 'claude-watermark-api',
-        status: 'ok',
-      },
-      requestId: context.get('requestId'),
+    successResponse(context, 'The API is healthy.', {
+      service: 'claude-watermark-api',
+      status: 'ok',
     }),
   );
   app.notFound((context) =>
-    context.json(
-      {
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: 'The requested resource was not found.',
-        },
-        requestId: context.get('requestId'),
-      },
-      404,
+    errorResponse(
+      context,
+      new ApiError(
+        404,
+        API_ERROR_CODE.notFound,
+        'The requested resource was not found.',
+        'No API route matches this request.',
+      ),
     ),
   );
   app.onError((error, context) => {
-    const requestId = context.get('requestId');
-    const apiError =
-      error instanceof ApiError
-        ? error
-        : new ApiError(500, 'INTERNAL_ERROR', 'The service could not complete the request.');
+    if (error instanceof ApiError) {
+      return errorResponse(context, error);
+    }
 
-    context.header('x-request-id', requestId);
-    return context.json(
-      {
-        success: false,
-        error: {
-          code: apiError.code,
-          message: apiError.message,
-        },
-        requestId,
-      },
-      apiError.status,
+    const requestId = context.get('requestId');
+
+    logUnhandledError(error, requestId);
+    return errorResponse(
+      context,
+      new ApiError(
+        500,
+        API_ERROR_CODE.internalError,
+        'The service could not complete the request.',
+        'An unexpected error occurred.',
+      ),
     );
   });
 

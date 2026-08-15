@@ -1,13 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { createApiApp, validateJsonBody } from '../../src/api/app';
+import { createApiApp, successResponse, validateJsonBody } from '../../src/api/app';
 
 const bindings = {
   EBOND_API_KEY: 'test-secret-must-not-leak',
   EBOND_BASE_URL: 'https://api.ebondai.com',
   EBOND_MODEL: 'gpt-5.5',
 };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('GET /api/v1/health', () => {
   it('reports API health without exposing configuration secrets', async () => {
@@ -26,6 +30,7 @@ describe('GET /api/v1/health', () => {
     expect(requestId).toMatch(/^[0-9a-f-]{36}$/);
     expect(body).toEqual({
       success: true,
+      message: 'The API is healthy.',
       data: {
         service: 'claude-watermark-api',
         status: 'ok',
@@ -51,9 +56,10 @@ describe('API error responses', () => {
 
     expect(body).toEqual({
       success: false,
+      message: 'The requested resource was not found.',
       error: {
         code: 'NOT_FOUND',
-        message: 'The requested resource was not found.',
+        details: 'No API route matches this request.',
       },
       requestId,
     });
@@ -61,6 +67,7 @@ describe('API error responses', () => {
 
   it('hides unexpected error details behind the shared JSON contract', async () => {
     const app = createApiApp();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     app.get('/api/v1/failure', () => {
       throw new Error('sensitive internal detail');
     });
@@ -76,13 +83,20 @@ describe('API error responses', () => {
     expect(response.status).toBe(500);
     expect(JSON.parse(responseText)).toEqual({
       success: false,
+      message: 'The service could not complete the request.',
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'The service could not complete the request.',
+        details: 'An unexpected error occurred.',
       },
       requestId,
     });
     expect(responseText).not.toContain('sensitive internal detail');
+    expect(consoleError).toHaveBeenCalledOnce();
+
+    const logEntry = String(consoleError.mock.calls[0]?.[0]);
+
+    expect(logEntry).toContain(String(requestId));
+    expect(logEntry).not.toContain('sensitive internal detail');
   });
 });
 
@@ -92,7 +106,7 @@ describe('JSON request validation', () => {
     app.post(
       '/api/v1/validation-test',
       validateJsonBody(z.object({ text: z.string().min(1) })),
-      (context) => context.json({ success: true }),
+      (context) => successResponse(context, 'The payload is valid.', null),
     );
 
     const response = await app.request(
@@ -109,9 +123,10 @@ describe('JSON request validation', () => {
     expect(response.status).toBe(422);
     expect(body).toEqual({
       success: false,
+      message: 'The request payload is invalid.',
       error: {
         code: 'VALIDATION_FAILED',
-        message: 'The request payload is invalid.',
+        details: 'Check the submitted fields and try again.',
       },
       requestId: response.headers.get('x-request-id'),
     });
