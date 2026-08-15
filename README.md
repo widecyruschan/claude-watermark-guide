@@ -149,3 +149,11 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：Cloudflare Pages Functions、Hono、Zod、Supabase Auth/Postgres/RLS、EBond Responses/Chat Completions、Vitest。
 - 新增或修改檔案：新增 `src/rewrite/` 模組、Phase 3 migration、API/Provider/資料庫測試、20 樣本評測與 `docs/operations/ebond-phase3.md`；更新 API 入口、Wrangler、package scripts 與本 README。
 - 後續建議：EBond 目前從 Cloudflare production 出站時沒有返回 HTTP 狀態，Responses 與 Chat 均無法完成；需供應商確認 Cloudflare Workers 可達性或提供來源地址，再重跑 95% 評測門檻。失敗請求已驗證會釋放額度，且一次性測試會員均已刪除。
+
+### 2026-08-16：完成 Phase 1–3 全站與 API QA
+- 會話主要目的：檢查 Phase 1–3 工程更新、全部公開頁面路由、響應式畫面、互動功能與所有 API/資料庫連線，修復可控問題後重新部署。
+- 完成的主要任務：遍歷首頁、Checker、三個內容頁、三個法律頁與 404；驗證桌面/手機、控制台、內部連結、Plausible、健康與錯誤 API；修復 Checker 結果永遠隱藏、空輸入無提示、手機導航截斷、Cookie 橫幅失效及分析政策不一致；新增三組 QA 回歸測試與 EBond 安全連線診斷。
+- 關鍵決策和解決方案：Plausible 官方標準腳本不使用 Cookie，因此移除不需要的同意橫幅並同步 Privacy/Cookie 文案；EBond 診斷只記錄安全狀態與模型存在與否，不記錄 Key、輸入、輸出或模型列表。
+- 使用的技術棧：Cloudflare Pages/Workers、原生 HTML/CSS/JavaScript、Hono、Vitest、Supabase Auth/Postgres/RLS、Plausible、EBond API。
+- 新增或修改檔案：修改 Checker、首頁、CSS、Privacy/Cookie、EBond Provider/API/運維手冊與本 README；新增 Checker、分析政策、EBond Secret/連線診斷回歸測試；本機保留完整 QA 報告與 38 張證據截圖。
+- 後續建議：Phase 1/2 與 Phase 3 的認證、冪等、配額釋放均通過；EBond production Key/帳戶對 `/v1/models`、Responses 與 Chat 均未返回上游 HTTP 狀態，需 EBond 檢查該帳戶及 `gpt-5.5` 路由。內容頁的 `[待確認]` 必須取得正式來源、日期與私隱聯絡資料後再移除。

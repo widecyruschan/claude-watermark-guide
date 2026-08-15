@@ -54,7 +54,7 @@ round(input_tokens * 0.6 + output_tokens * 3.6)
 
 429、502、503、504 最多短暫重試一次。timeout、取消和無 HTTP 狀態的傳輸失敗不重試。Provider 失敗會釋放額度；Provider 已成功但資料庫結算失敗時，會以相同參數重試三次並保留 reservation，避免錯誤釋放已產生成本的請求。最終失敗日誌會保留 request/user ID、Token 與成本，讓管理員在資料庫恢復後以相同參數受控重放冪等 `complete_rewrite_request`。
 
-結構化日誌只包含 request/user ID、模型、Prompt 版本、字元/Token、成本、耗時、HTTP 狀態或標準失敗分類。不得加入輸入、輸出、Authorization、Cookie 或任何 Secret。
+結構化日誌只包含 request/user ID、模型、Prompt 版本、字元/Token、成本、耗時、HTTP 狀態或標準失敗分類。無 HTTP 狀態的 Provider 失敗會額外呼叫一次不含使用者文字的 `/v1/models`，且只記錄 HTTP 狀態與指定模型是否存在。不得加入輸入、輸出、模型列表、Authorization、Cookie 或任何 Secret。
 
 ## 評測
 
@@ -64,8 +64,8 @@ round(input_tokens * 0.6 + output_tokens * 3.6)
 REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
 ```
 
-## 2026-08-15 聯調狀態
+## 2026-08-16 聯調狀態
 
 Supabase development/production 的 claim、settle、release、RLS 與重複 Key 測試均通過。Cloudflare production 已配置兩個加密 Secret。
 
-EBond Responses 與顯式 Chat Completions 均在 Cloudflare 出站子請求階段失敗，沒有取得上游 HTTP 狀態；本機對相同公開主機可取得未授權 HTTP 回應。production 已恢復 `responses`，評測暫未達成，需由 EBond 確認 Cloudflare Workers 出站相容性或提供可用來源地址後重跑。
+Cloudflare remote probe 在沒有 Key 及使用明顯無效 ASCII Key 時，均能從 EBond `/v1/models` 取得 HTTP 401，證明 Workers 到公開主機的網路可達。production Key 對 `/v1/models`、Responses 與顯式 Chat Completions 均在 EBond 端未返回 HTTP 狀態；Key 已通過 HTTP Header 字元格式驗證。production 保持 `responses`，失敗請求會釋放額度且重複 Key 不會再次計費。需由 EBond 檢查該 Key/帳戶及 `gpt-5.5` 上游路由後重跑評測。
