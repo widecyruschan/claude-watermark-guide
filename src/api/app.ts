@@ -11,6 +11,7 @@ interface ApiBindings {
 
 interface ApiVariables {
   requestId: string;
+  requestStartedAt: number;
   validatedBody: unknown;
 }
 
@@ -49,6 +50,7 @@ const requestIdMiddleware = createMiddleware<ApiEnvironment>(async (context, nex
   const requestId = crypto.randomUUID();
 
   context.set('requestId', requestId);
+  context.set('requestStartedAt', Date.now());
   await next();
   context.header('x-request-id', requestId);
 });
@@ -97,13 +99,24 @@ function errorResponse(context: Context<ApiEnvironment>, error: ApiError) {
   return context.json(responseBody, error.status);
 }
 
-function logUnhandledError(error: Error, requestId: string) {
+function logUnhandledError(error: Error, context: Context<ApiEnvironment>) {
+  const requestStartedAt = context.get('requestStartedAt');
+
   console.error(
     JSON.stringify({
+      timestamp: new Date().toISOString(),
       level: 'error',
       event: 'unhandled_api_error',
-      requestId,
+      requestId: context.get('requestId'),
+      method: context.req.method,
+      path: context.req.path,
+      userId: null,
+      ip: context.req.header('cf-connecting-ip') ?? null,
+      statusCode: 500,
+      errorCode: API_ERROR_CODE.internalError,
+      errorMessage: 'An unexpected error occurred.',
       errorName: error.name,
+      durationMs: Math.max(0, Date.now() - requestStartedAt),
     }),
   );
 }
@@ -165,9 +178,7 @@ export function createApiApp() {
       return errorResponse(context, error);
     }
 
-    const requestId = context.get('requestId');
-
-    logUnhandledError(error, requestId);
+    logUnhandledError(error, context);
     return errorResponse(
       context,
       new ApiError(

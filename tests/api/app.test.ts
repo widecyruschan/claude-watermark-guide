@@ -74,7 +74,11 @@ describe('API error responses', () => {
 
     const response = await app.request(
       'https://watermarklens.com/api/v1/failure',
-      undefined,
+      {
+        headers: {
+          'cf-connecting-ip': '203.0.113.10',
+        },
+      },
       bindings,
     );
     const responseText = await response.text();
@@ -93,10 +97,25 @@ describe('API error responses', () => {
     expect(responseText).not.toContain('sensitive internal detail');
     expect(consoleError).toHaveBeenCalledOnce();
 
-    const logEntry = String(consoleError.mock.calls[0]?.[0]);
+    const logEntry = JSON.parse(String(consoleError.mock.calls[0]?.[0]));
 
-    expect(logEntry).toContain(String(requestId));
-    expect(logEntry).not.toContain('sensitive internal detail');
+    expect(logEntry).toMatchObject({
+      level: 'error',
+      event: 'unhandled_api_error',
+      requestId,
+      method: 'GET',
+      path: '/api/v1/failure',
+      userId: null,
+      ip: '203.0.113.10',
+      statusCode: 500,
+      errorCode: 'INTERNAL_ERROR',
+      errorMessage: 'An unexpected error occurred.',
+      errorName: 'Error',
+    });
+    expect(logEntry.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(logEntry.durationMs).toBeTypeOf('number');
+    expect(logEntry.durationMs).toBeGreaterThanOrEqual(0);
+    expect(JSON.stringify(logEntry)).not.toContain('sensitive internal detail');
   });
 });
 
