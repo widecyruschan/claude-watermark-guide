@@ -303,6 +303,7 @@ async function initializeAccountPage(client: SupabaseClient): Promise<void> {
 
   const accountMenu = getElement('accountMenu', HTMLDetailsElement);
   accountMenu.hidden = false;
+  getElement('signInNavigationLink', HTMLAnchorElement).hidden = true;
   getElement('menuSignOutButton', HTMLButtonElement).addEventListener('click', () => {
     void signOut(client, getElement('signOutButton', HTMLButtonElement));
   });

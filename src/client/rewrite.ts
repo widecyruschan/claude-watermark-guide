@@ -348,12 +348,14 @@ async function initializeRewritePage(): Promise<void> {
       session = nextSession;
       if (!nextSession) {
         setAuthenticatedControls(false, FREE_REQUEST_LIMIT);
+        element('signInNavigationLink', HTMLAnchorElement).hidden = false;
         element('rewriteAuthNoticeText', HTMLElement).textContent =
           'Sign in to use AI rewriting. Your local draft will remain here.';
         return;
       }
       const limit = await loadRequestLimit(client, nextSession).catch(() => FREE_REQUEST_LIMIT);
       setAuthenticatedControls(true, limit);
+      element('signInNavigationLink', HTMLAnchorElement).hidden = true;
       element('accountMenu', HTMLDetailsElement).hidden = false;
     };
     await applySession(session);

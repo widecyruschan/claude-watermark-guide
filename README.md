@@ -284,3 +284,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：追加本 README 驗收記錄；未建立、讀取、修改或提交任何 Secret、`.env` 或本機憑據檔。
 - 驗證結果：`npm run check`（51 passed、8 skipped）、`npm run test:e2e`（4 passed）、`npm run test:database`（8 passed）、`npx supabase db lint --local --level warning` 及 `git diff --check` 均通過。
 - 後續建議：在 development 及 production 套用 migration 後，以新建測試會員完成 Magic Link、Google、Free／Pro 權益、session 過期及刪除帳戶的實際遠端驗證；不可使用正式帳戶測試刪除。
+
+### 2026-08-16：統一全站導航與路由
+- 會話主要目的：修正登入、法律頁、內容頁及 404 頁的導航不一致問題。
+- 完成的主要任務：所有公開路由統一顯示 Home、What Is、How It Works、What Changed、Free Checker、AI Rewriter 及 Sign in；會員頁保留登入後 Account menu，並在 session 恢復後隱藏重複的 Sign in 入口。
+- 關鍵決策和解決方案：導航使用同一組公開路由連結，頁面品牌連結統一回到首頁；不把需要 session 的 Account menu 暴露給訪客。
+- 使用的技術棧：原生 HTML/CSS、TypeScript、Supabase Auth、Vitest、Playwright、Cloudflare Pages smoke test。
+- 新增或修改檔案：更新所有 HTML header、會員導航狀態切換、導航回歸測試及完整公開路由 smoke test；未建立或提交任何 Secret、`.env` 或 `.dev.vars`。
+- 驗證結果：所有頁面源碼導航矩陣通過；`npm run check`、`npm run test:e2e`（5 項）及完整 Pages smoke 路由檢查通過。
+- 後續建議：部署後在 `watermarklens.com/privacy`、`/terms`、`/cookie`、`/login` 及 `/404` 實際點擊確認自訂網域 rewrite 規則與導航一致。

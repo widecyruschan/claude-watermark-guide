@@ -85,12 +85,25 @@ async function verifyResponse(path, expectedText) {
 
 try {
   await waitForServer();
-  await verifyResponse('/', "Claude's Invisible Text Watermark");
-  await verifyResponse('/checker', 'Claude Watermark Self-Check');
-  await verifyResponse('/login', 'Sign in to Watermark Lens');
-  await verifyResponse('/account', 'Your account');
-  await verifyResponse('/rewrite', 'AI Text Rewriter');
-  await verifyResponse('/auth/callback', 'Completing sign-in');
+  const pageChecks = [
+    ['/', "Claude's Invisible Text Watermark"],
+    ['/what-is-claude-watermark', "What Is Claude's Invisible Text Watermark"],
+    ['/how-it-works', "How Claude's Watermarking Works"],
+    ['/changes-2026', 'What Changed in Claude Watermarking Recently'],
+    ['/checker', 'Claude Watermark Self-Check'],
+    ['/rewrite', 'AI Text Rewriter'],
+    ['/login', 'Sign in to Watermark Lens'],
+    ['/account', 'Your account'],
+    ['/privacy', 'Privacy Policy'],
+    ['/terms', 'Terms of Service'],
+    ['/cookie', 'Cookie Policy'],
+    ['/auth/callback', 'Completing sign-in'],
+  ];
+
+  for (const [path, expectedText] of pageChecks) {
+    await verifyResponse(path, expectedText);
+  }
+
   await verifyResponse('/js/auth.js', 'exchangeCodeForSession');
   await verifyResponse('/js/rewrite.js', 'idempotency-key');
 

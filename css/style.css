@@ -40,8 +40,10 @@ a:hover { text-decoration: underline; }
 }
 .site-header .container { display: flex; align-items: center; justify-content: space-between; }
 .brand { font-weight: 600; font-size: 18px; }
-.nav a { margin-left: 16px; color: var(--text-muted); font-size: 14px; }
+.nav { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: flex-end; }
+.nav a { color: var(--text-muted); font-size: 14px; }
 .nav a:hover { color: var(--text); }
+.nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
 
 footer {
   border-top: 1px solid var(--border);
@@ -177,8 +179,7 @@ footer .container { display: flex; gap: 16px; flex-wrap: wrap; }
 /* Responsive — mobile */
 @media (max-width: 768px) {
   .site-header .container { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .nav { display: flex; flex-wrap: wrap; gap: 6px 16px; width: 100%; }
-  .nav a { margin-left: 0; }
+  .nav { justify-content: flex-start; width: 100%; }
   .hero { grid-template-columns: 1fr; }
   .nav-cards { grid-template-columns: 1fr; }
   .article-layout { grid-template-columns: 1fr; }

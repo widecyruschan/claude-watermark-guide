@@ -36,6 +36,20 @@ test('login provides Magic Link and Google sign-in without overflowing', async (
   ).toBe(true);
 });
 
+test('legal pages retain the complete public navigation', async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.goto('/privacy');
+
+  const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+  await expect(navigation.getByRole('link', { name: 'AI Rewriter' })).toBeVisible();
+  await expect(navigation.getByRole('link', { name: 'Sign in' })).toBeVisible();
+  expect(
+    await page
+      .locator('html')
+      .evaluate((documentElement) => documentElement.scrollWidth <= window.innerWidth),
+  ).toBe(true);
+});
+
 test('account requires an authenticated session', async ({ page }) => {
   await page.goto('/account');
   await expect(page).toHaveURL(/\/login$/);

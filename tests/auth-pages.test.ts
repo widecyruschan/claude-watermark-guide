@@ -2,6 +2,44 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 describe('member authentication pages', () => {
+  const publicNavigation = [
+    'href="/"',
+    'href="/what-is-claude-watermark"',
+    'href="/how-it-works"',
+    'href="/changes-2026"',
+    'href="/checker"',
+    'href="/rewrite"',
+    'href="/login"',
+  ];
+
+  const publicPages = [
+    '../index.html',
+    '../404.html',
+    '../auth/callback.html',
+    '../pages/checker.html',
+    '../pages/changes-2026.html',
+    '../pages/cookie.html',
+    '../pages/how-it-works.html',
+    '../pages/login.html',
+    '../pages/privacy.html',
+    '../pages/terms.html',
+    '../pages/what-is-claude-watermark.html',
+  ];
+
+  it('uses the same public navigation on every public route', async () => {
+    const pages = await Promise.all(
+      publicPages.map((path) => readFile(new URL(path, import.meta.url), 'utf8')),
+    );
+
+    for (const page of pages) {
+      expect(page).toContain('aria-label="Primary navigation"');
+
+      for (const link of publicNavigation) {
+        expect(page).toContain(link);
+      }
+    }
+  });
+
   it('exposes Magic Link, Google sign-in, callback, account, and sign-out surfaces', async () => {
     const [homepage, loginPage, callbackPage, accountPage, rewritePage, checkerPage] =
       await Promise.all([
@@ -33,6 +71,7 @@ describe('member authentication pages', () => {
     expect(accountPage).toContain('id="accountUsage"');
     expect(accountPage).toContain('id="accountUsageProgress"');
     expect(accountPage).toContain('id="accountMenu"');
+    expect(accountPage).toContain('id="signInNavigationLink"');
     expect(accountPage).toContain('id="signOutButton"');
     expect(accountPage).toContain('id="confirmDeleteAccountButton"');
     expect(accountPage).toContain('id="reauthenticateLink"');
@@ -45,6 +84,7 @@ describe('member authentication pages', () => {
     expect(rewritePage).toContain('id="copyRewriteResultButton"');
     expect(rewritePage).toContain('id="downloadRewriteResultButton"');
     expect(rewritePage).toContain('src="/js/rewrite.js"');
+    expect(rewritePage).toContain('id="signInNavigationLink"');
     expect(rewritePage).not.toContain('maxlength=');
     expect(rewritePage).not.toContain('language"');
     expect(checkerPage).toContain('Your text is processed in your browser only.');
