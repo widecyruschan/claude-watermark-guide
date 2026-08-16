@@ -5,6 +5,19 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z, type ZodType } from 'zod';
 
 import {
+  type AccountDeletionGateway,
+  SupabaseAccountDeletionGateway,
+} from '../account/supabaseAccountDeletionGateway';
+import {
+  BillingError,
+  createBillingPortal,
+  createProCheckout,
+  processStripeWebhook,
+  type BillingRuntime,
+} from '../billing/billingService';
+import { StripeBillingProvider } from '../billing/stripeBillingProvider';
+import { SupabaseBillingGateway } from '../billing/supabaseBillingGateway';
+import {
   REWRITE_MAX_BODY_BYTES,
   rewriteInputSchema,
   type RewriteInput,
@@ -16,16 +29,17 @@ import {
   RewriteError,
   type RewriteRuntime,
 } from '../rewrite/rewriteService';
-import {
-  SupabaseRewriteGateway,
-  type AccountDeletionGateway,
-} from '../rewrite/supabaseRewriteGateway';
+import { SupabaseRewriteGateway } from '../rewrite/supabaseRewriteGateway';
 
 export interface ApiBindings {
+  APP_BASE_URL?: string;
   EBOND_API_KEY: string;
   EBOND_API_MODE?: string;
   EBOND_BASE_URL: string;
   EBOND_MODEL: string;
+  STRIPE_PRO_PRICE_ID?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUPABASE_URL: string;
@@ -50,6 +64,9 @@ export const API_ERROR_CODE = {
   accountSuspended: 'ACCOUNT_SUSPENDED',
   authConfigurationError: 'AUTH_CONFIGURATION_ERROR',
   authenticationRequired: 'AUTHENTICATION_REQUIRED',
+  billingConfigurationError: 'BILLING_CONFIGURATION_ERROR',
+  billingUnavailable: 'BILLING_UNAVAILABLE',
+  checkoutAlreadyPending: 'CHECKOUT_ALREADY_PENDING',
   databaseUnavailable: 'DATABASE_UNAVAILABLE',
   idempotencyAlreadyCompleted: 'IDEMPOTENCY_ALREADY_COMPLETED',
   idempotencyAlreadyFailed: 'IDEMPOTENCY_ALREADY_FAILED',
@@ -69,7 +86,11 @@ export const API_ERROR_CODE = {
   quotaExceeded: 'QUOTA_EXCEEDED',
   recentAuthenticationRequired: 'RECENT_AUTHENTICATION_REQUIRED',
   requestLimitExceeded: 'REQUEST_LIMIT_EXCEEDED',
+  subscriptionAlreadyActive: 'SUBSCRIPTION_ALREADY_ACTIVE',
+  subscriptionRequired: 'SUBSCRIPTION_REQUIRED',
   validationFailed: 'VALIDATION_FAILED',
+  webhookPayloadInvalid: 'WEBHOOK_PAYLOAD_INVALID',
+  webhookSignatureInvalid: 'WEBHOOK_SIGNATURE_INVALID',
 } as const;
 
 const publicAuthConfigSchema = z.object({
@@ -205,8 +226,23 @@ export function validateJsonBody(schema: ZodType) {
   });
 }
 
+function createBillingBodyLimit() {
+  return bodyLimit({
+    maxSize: 1024,
+    onError: () => {
+      throw new ApiError(
+        413,
+        API_ERROR_CODE.payloadTooLarge,
+        'The request body is too large.',
+        'Billing commands only accept an empty JSON object.',
+      );
+    },
+  });
+}
+
 interface CreateApiAppOptions {
   accountDeletionGatewayFactory?: (bindings: ApiBindings) => AccountDeletionGateway;
+  billingRuntimeFactory?: (bindings: ApiBindings) => BillingRuntime;
   rewriteRuntimeFactory?: (bindings: ApiBindings) => RewriteRuntime;
 }
 
@@ -214,6 +250,7 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
   const app = new Hono<ApiEnvironment>();
   const accountDeletionGatewayFactory =
     options.accountDeletionGatewayFactory ?? createProductionAccountDeletionGateway;
+  const billingRuntimeFactory = options.billingRuntimeFactory ?? createProductionBillingRuntime;
   const rewriteRuntimeFactory = options.rewriteRuntimeFactory ?? createProductionRewriteRuntime;
 
   app.use('*', requestIdMiddleware);
@@ -296,6 +333,68 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       });
     },
   );
+  app.post(
+    '/api/v1/billing/checkout',
+    createBillingBodyLimit(),
+    validateJsonBody(z.object({}).strict()),
+    async (context) => {
+      const idempotencyKey = z.uuid().safeParse(context.req.header('idempotency-key'));
+
+      if (!idempotencyKey.success) {
+        throw new ApiError(
+          422,
+          API_ERROR_CODE.validationFailed,
+          'The request payload is invalid.',
+          'Provide a UUID in the Idempotency-Key header.',
+        );
+      }
+
+      const result = await createProCheckout(billingRuntimeFactory(context.env), {
+        appBaseUrl: context.env.APP_BASE_URL,
+        authorizationHeader: context.req.header('authorization'),
+        idempotencyKey: idempotencyKey.data,
+        priceId: context.env.STRIPE_PRO_PRICE_ID,
+      });
+
+      return successResponse(context, 'The checkout session was created.', result);
+    },
+  );
+  app.post(
+    '/api/v1/billing/portal',
+    createBillingBodyLimit(),
+    validateJsonBody(z.object({}).strict()),
+    async (context) => {
+      const result = await createBillingPortal(billingRuntimeFactory(context.env), {
+        appBaseUrl: context.env.APP_BASE_URL,
+        authorizationHeader: context.req.header('authorization'),
+      });
+
+      return successResponse(context, 'The billing portal session was created.', result);
+    },
+  );
+  app.post(
+    '/api/v1/webhooks/stripe',
+    bodyLimit({
+      maxSize: 256 * 1024,
+      onError: () => {
+        throw new ApiError(
+          413,
+          API_ERROR_CODE.payloadTooLarge,
+          'The request body is too large.',
+          'Send a Stripe event within the supported size limit.',
+        );
+      },
+    }),
+    async (context) => {
+      const result = await processStripeWebhook(billingRuntimeFactory(context.env), {
+        payload: await context.req.text(),
+        signature: context.req.header('stripe-signature'),
+        webhookSecret: context.env.STRIPE_WEBHOOK_SECRET,
+      });
+
+      return successResponse(context, 'The Stripe event was accepted.', result);
+    },
+  );
   app.post('/api/v1/account/delete', async (context) => {
     await accountDeletionGatewayFactory(context.env).deleteRecentlyAuthenticatedUser(
       context.req.header('authorization'),
@@ -321,11 +420,12 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
     }
 
     if (
+      error instanceof BillingError ||
       error instanceof RewriteError ||
       error instanceof EbondProviderError ||
       error instanceof AccountDeletionError
     ) {
-      return errorResponse(context, mapRewriteError(error));
+      return errorResponse(context, mapServiceError(error));
     }
 
     logUnhandledError(error, context);
@@ -362,15 +462,42 @@ function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
   };
 }
 
-function createProductionAccountDeletionGateway(bindings: ApiBindings): AccountDeletionGateway {
-  return new SupabaseRewriteGateway(bindings.SUPABASE_URL, bindings.SUPABASE_SERVICE_ROLE_KEY);
+function createProductionBillingRuntime(bindings: ApiBindings): BillingRuntime {
+  const priceId = bindings.STRIPE_PRO_PRICE_ID;
+  const secretKey = bindings.STRIPE_SECRET_KEY;
+
+  if (!priceId || !secretKey) {
+    throw new BillingError('BILLING_CONFIGURATION_ERROR');
+  }
+
+  const gateway = new SupabaseBillingGateway(
+    bindings.SUPABASE_URL,
+    bindings.SUPABASE_SERVICE_ROLE_KEY,
+    priceId,
+  );
+  return {
+    authenticator: gateway,
+    provider: new StripeBillingProvider(secretKey),
+    repository: gateway,
+  };
 }
 
-function mapRewriteError(
-  error: RewriteError | EbondProviderError | AccountDeletionError,
+function createProductionAccountDeletionGateway(bindings: ApiBindings): AccountDeletionGateway {
+  return new SupabaseAccountDeletionGateway(
+    bindings.SUPABASE_URL,
+    bindings.SUPABASE_SERVICE_ROLE_KEY,
+    bindings.STRIPE_SECRET_KEY ? new StripeBillingProvider(bindings.STRIPE_SECRET_KEY) : null,
+  );
+}
+
+function mapServiceError(
+  error: RewriteError | EbondProviderError | AccountDeletionError | BillingError,
 ): ApiError {
   const errorDefinitions: Record<
-    RewriteError['code'] | EbondProviderError['code'] | AccountDeletionError['code'],
+    | RewriteError['code']
+    | EbondProviderError['code']
+    | AccountDeletionError['code']
+    | BillingError['code'],
     {
       details: string;
       message: string;
@@ -396,6 +523,21 @@ function mapRewriteError(
       details: 'Sign in and submit the request again.',
       message: 'Authentication is required.',
       status: 401,
+    },
+    BILLING_CONFIGURATION_ERROR: {
+      details: 'Contact support before retrying billing.',
+      message: 'Billing is not configured yet.',
+      status: 503,
+    },
+    BILLING_UNAVAILABLE: {
+      details: 'Try again later or contact support if the problem continues.',
+      message: 'Billing is temporarily unavailable.',
+      status: 503,
+    },
+    CHECKOUT_ALREADY_PENDING: {
+      details: 'Finish or wait for the current Checkout Session before retrying.',
+      message: 'A checkout session is already pending.',
+      status: 409,
     },
     DATABASE_UNAVAILABLE: {
       details: 'Try again later with a new request.',
@@ -471,6 +613,26 @@ function mapRewriteError(
       details: 'Reduce the submitted text and try again.',
       message: 'The text exceeds the plan request limit.',
       status: 422,
+    },
+    SUBSCRIPTION_ALREADY_ACTIVE: {
+      details: 'Open the billing portal to manage the existing subscription.',
+      message: 'The account already has paid access.',
+      status: 409,
+    },
+    SUBSCRIPTION_REQUIRED: {
+      details: 'Start a Pro subscription before opening the billing portal.',
+      message: 'A subscription is required.',
+      status: 403,
+    },
+    WEBHOOK_PAYLOAD_INVALID: {
+      details: 'Send a supported Stripe event payload.',
+      message: 'The webhook payload is invalid.',
+      status: 400,
+    },
+    WEBHOOK_SIGNATURE_INVALID: {
+      details: 'Provide a valid Stripe-Signature header.',
+      message: 'The webhook signature is invalid.',
+      status: 400,
     },
   };
   const definition = errorDefinitions[error.code];

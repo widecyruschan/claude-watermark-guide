@@ -152,7 +152,9 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
 
     const protectedSubscriptionColumns = await first.browserClient
       .from('subscriptions')
-      .select('stripe_customer_id, stripe_subscription_id')
+      .select(
+        'stripe_customer_id,stripe_subscription_id,stripe_price_id,stripe_checkout_session_id,last_stripe_event_created_at',
+      )
       .eq('user_id', first.user.id);
     expect(protectedSubscriptionColumns.error?.code).toBe('42501');
 
@@ -323,15 +325,22 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       .single();
     expect(freePeriod.error).toBeNull();
 
-    const subscriptionUpdate = await serviceClient
-      .from('subscriptions')
-      .update({
-        current_period_end: freePeriod.data!.period_end,
-        current_period_start: freePeriod.data!.period_start,
-        plan_code: 'pro',
-        status: 'active',
-      })
-      .eq('user_id', proUser.user.id);
+    const subscriptionUpdate = await serviceClient.rpc('process_stripe_webhook_event', {
+      p_cancel_at_period_end: false,
+      p_checkout_session_id: null,
+      p_customer_id: `cus_${crypto.randomUUID().replaceAll('-', '')}`,
+      p_event_created_at: new Date().toISOString(),
+      p_event_id: `evt_${crypto.randomUUID().replaceAll('-', '')}`,
+      p_event_type: 'customer.subscription.updated',
+      p_grace_period_end: null,
+      p_payload_sha256: 'b'.repeat(64),
+      p_period_end: freePeriod.data!.period_end,
+      p_period_start: freePeriod.data!.period_start,
+      p_price_id: 'price_test_pro_monthly',
+      p_status: 'active',
+      p_subscription_id: `sub_${crypto.randomUUID().replaceAll('-', '')}`,
+      p_user_id: proUser.user.id,
+    });
     expect(subscriptionUpdate.error).toBeNull();
 
     const requestId = crypto.randomUUID();

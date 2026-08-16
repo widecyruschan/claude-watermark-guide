@@ -201,7 +201,7 @@ async function loadRequestLimit(client: SupabaseClient, session: Session): Promi
   const [subscriptionResult, usageResult] = await Promise.all([
     client
       .from('subscriptions')
-      .select('plan_code,status,current_period_start,current_period_end')
+      .select('plan_code,status,current_period_start,current_period_end,grace_period_end')
       .eq('user_id', session.user.id)
       .maybeSingle(),
     client.from('plans').select('code,request_character_limit').eq('is_active', true),
@@ -210,11 +210,14 @@ async function loadRequestLimit(client: SupabaseClient, session: Session): Promi
   const now = Date.now();
   const isPro =
     subscription?.plan_code === 'pro' &&
-    (subscription.status === 'active' || subscription.status === 'trialing') &&
     Number.isFinite(Date.parse(subscription.current_period_start ?? '')) &&
     Number.isFinite(Date.parse(subscription.current_period_end ?? '')) &&
     Date.parse(subscription.current_period_start ?? '') <= now &&
-    Date.parse(subscription.current_period_end ?? '') > now;
+    Date.parse(subscription.current_period_end ?? '') > now &&
+    (subscription.status === 'active' ||
+      subscription.status === 'trialing' ||
+      (subscription.status === 'past_due' &&
+        Date.parse(subscription.grace_period_end ?? '') > now));
   const plan = usageResult.data?.find((item) => item.code === (isPro ? 'pro' : 'free'));
   return Number(plan?.request_character_limit) || (isPro ? PRO_REQUEST_LIMIT : FREE_REQUEST_LIMIT);
 }

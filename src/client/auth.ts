@@ -31,10 +31,18 @@ interface PublicAuthConfigResponse {
 }
 
 export interface SubscriptionRecord {
+  cancel_at_period_end: boolean;
   current_period_end: string | null;
   current_period_start: string | null;
+  grace_period_end: string | null;
   plan_code: string;
   status: string;
+}
+
+export interface BillingPresentation {
+  canCheckout: boolean;
+  canOpenPortal: boolean;
+  message: string;
 }
 
 export function resolveEffectivePlan(
@@ -47,15 +55,71 @@ export function resolveEffectivePlan(
   const periodEnd = subscription.current_period_end
     ? Date.parse(subscription.current_period_end)
     : Number.NaN;
+  const gracePeriodEnd = subscription.grace_period_end
+    ? Date.parse(subscription.grace_period_end)
+    : Number.NaN;
   const isCurrentPro =
     subscription.plan_code === 'pro' &&
-    (subscription.status === 'active' || subscription.status === 'trialing') &&
     Number.isFinite(periodStart) &&
     Number.isFinite(periodEnd) &&
     periodStart <= now.getTime() &&
-    periodEnd > now.getTime();
+    periodEnd > now.getTime() &&
+    (subscription.status === 'active' ||
+      subscription.status === 'trialing' ||
+      (subscription.status === 'past_due' && gracePeriodEnd > now.getTime()));
 
   return isCurrentPro ? 'pro' : 'free';
+}
+
+export function resolveBillingPresentation(
+  subscription: SubscriptionRecord,
+  now = new Date(),
+): BillingPresentation {
+  if (subscription.status === 'incomplete') {
+    return {
+      canCheckout: false,
+      canOpenPortal: false,
+      message: 'Payment processing. Your plan will update after Stripe confirms payment.',
+    };
+  }
+
+  if (subscription.status === 'past_due') {
+    const gracePeriodEnd = subscription.grace_period_end;
+    const graceEnd = Date.parse(gracePeriodEnd ?? '');
+    const graceMessage =
+      gracePeriodEnd && graceEnd > now.getTime()
+        ? ` Pro access remains available through ${formatDate(gracePeriodEnd)}.`
+        : ' Pro access is now limited to the Free plan.';
+    return {
+      canCheckout: false,
+      canOpenPortal: true,
+      message: `Payment failed.${graceMessage} Update your payment method to keep Pro.`,
+    };
+  }
+
+  if (subscription.status === 'active' || subscription.status === 'trialing') {
+    return {
+      canCheckout: false,
+      canOpenPortal: true,
+      message: subscription.cancel_at_period_end
+        ? 'Your Pro subscription will end after the current billing period.'
+        : 'Your Pro subscription is active.',
+    };
+  }
+
+  if (subscription.status === 'unpaid' || subscription.status === 'paused') {
+    return {
+      canCheckout: false,
+      canOpenPortal: true,
+      message: 'Pro access is paused. Open billing to resolve the payment issue.',
+    };
+  }
+
+  return {
+    canCheckout: true,
+    canOpenPortal: false,
+    message: 'Upgrade to Pro securely through Stripe Checkout.',
+  };
 }
 
 export function shouldReturnToLogin(event: string, session: unknown | null): boolean {
@@ -301,6 +365,15 @@ async function initializeAccountPage(client: SupabaseClient): Promise<void> {
 
   await renderAccount(client, session);
 
+  const checkoutButton = getElement('startCheckoutButton', HTMLButtonElement);
+  checkoutButton.addEventListener('click', () => {
+    void openBillingDestination(client, 'checkout', checkoutButton);
+  });
+  const portalButton = getElement('openBillingPortalButton', HTMLButtonElement);
+  portalButton.addEventListener('click', () => {
+    void openBillingDestination(client, 'portal', portalButton);
+  });
+
   const accountMenu = getElement('accountMenu', HTMLDetailsElement);
   accountMenu.hidden = false;
   getElement('signInNavigationLink', HTMLAnchorElement).hidden = true;
@@ -336,12 +409,15 @@ async function renderAccount(client: SupabaseClient, session: Session): Promise<
     client.from('profiles').select('display_name,status').eq('id', session.user.id).maybeSingle(),
     client
       .from('subscriptions')
-      .select('plan_code,status,current_period_start,current_period_end')
+      .select(
+        'plan_code,status,current_period_start,current_period_end,cancel_at_period_end,grace_period_end',
+      )
       .eq('user_id', session.user.id)
       .maybeSingle(),
   ]);
   const subscription = subscriptionResult.data as SubscriptionRecord | null;
   const effectivePlan = subscription ? resolveEffectivePlan(subscription) : null;
+  const billingPresentation = subscription ? resolveBillingPresentation(subscription) : null;
   const now = new Date();
   const usageResult = effectivePlan
     ? await client
@@ -400,11 +476,78 @@ async function renderAccount(client: SupabaseClient, session: Session): Promise<
   usageProgress.setAttribute('aria-label', `${usageLabel}`);
   getElement('accountDetails', HTMLDListElement).hidden = false;
   getElement('accountUpgradeNotice', HTMLElement).hidden = effectivePlan === 'pro';
+  const checkoutButton = getElement('startCheckoutButton', HTMLButtonElement);
+  checkoutButton.hidden = !billingPresentation?.canCheckout;
+  checkoutButton.disabled = !billingPresentation?.canCheckout;
+  const portalButton = getElement('openBillingPortalButton', HTMLButtonElement);
+  portalButton.hidden = !billingPresentation?.canOpenPortal;
+  portalButton.disabled = !billingPresentation?.canOpenPortal;
+  getElement('billingActionMessage', HTMLParagraphElement).textContent =
+    billingPresentation?.message ?? 'Billing details are being prepared.';
+  getElement('billingActions', HTMLElement).hidden = false;
   setStatus(
     profileResult.error || subscriptionResult.error || usageResult?.error
       ? 'Signed in. Some membership details are temporarily unavailable.'
       : 'Signed in.',
   );
+}
+
+async function openBillingDestination(
+  client: SupabaseClient,
+  destination: 'checkout' | 'portal',
+  button: HTMLButtonElement,
+): Promise<void> {
+  button.disabled = true;
+  const status = getElement('billingActionStatus', HTMLParagraphElement);
+  status.textContent = destination === 'checkout' ? 'Opening secure checkout…' : 'Opening billing…';
+  status.classList.remove('error');
+  try {
+    const {
+      data: { session },
+    } = await client.auth.getSession();
+
+    if (!session) {
+      window.location.replace('/login?next=/account');
+      return;
+    }
+
+    const headers: Record<string, string> = {
+      authorization: `Bearer ${session.access_token}`,
+      'content-type': 'application/json',
+    };
+    if (destination === 'checkout') {
+      headers['idempotency-key'] = crypto.randomUUID();
+    }
+
+    const response = await fetch(`/api/v1/billing/${destination}`, {
+      body: '{}',
+      headers,
+      method: 'POST',
+    });
+    const body = (await response.json().catch(() => null)) as {
+      data?: { url?: string };
+      message?: string;
+      success?: boolean;
+    } | null;
+
+    if (!response.ok || body?.success !== true || typeof body.data?.url !== 'string') {
+      button.disabled = false;
+      status.textContent = body?.message ?? 'Billing is temporarily unavailable. Please try again.';
+      status.classList.add('error');
+      return;
+    }
+
+    const target = new URL(body.data.url);
+    if (target.protocol !== 'https:' || !target.hostname.endsWith('.stripe.com')) {
+      throw new Error('INVALID_BILLING_DESTINATION');
+    }
+
+    window.location.assign(target.toString());
+  } catch {
+    button.disabled = false;
+    status.textContent = 'Billing is temporarily unavailable. Please try again.';
+    status.classList.add('error');
+  }
 }
 
 function formatDate(value: string): string {

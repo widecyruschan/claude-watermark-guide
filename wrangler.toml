@@ -4,6 +4,7 @@ compatibility_date = "2026-08-15"
 pages_build_output_dir = "dist"
 
 [env.production.vars]
+APP_BASE_URL = "https://watermarklens.com"
 EBOND_BASE_URL = "https://api.ebondai.com"
 EBOND_API_MODE = "responses"
 EBOND_MODEL = "gpt-5.5"

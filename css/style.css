@@ -218,9 +218,10 @@ footer .container { display: flex; gap: 16px; flex-wrap: wrap; }
 }
 .account-menu-panel button { cursor: pointer; }
 .account-menu-panel a:hover, .account-menu-panel button:hover { background: var(--surface); text-decoration: none; }
-.upgrade-notice, .account-danger-zone, .tool-separator { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 20px; }
+.upgrade-notice, .account-billing, .account-danger-zone, .tool-separator { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 20px; }
 .upgrade-notice { color: var(--text-muted); }
-.upgrade-notice h2, .account-danger-zone h2, .tool-separator h2 { color: var(--text); font-size: 18px; margin: 0 0 8px; }
+.upgrade-notice h2, .account-billing h2, .account-danger-zone h2, .tool-separator h2 { color: var(--text); font-size: 18px; margin: 0 0 8px; }
+.account-billing p { color: var(--text-muted); font-size: 14px; }
 .account-danger-zone { max-width: 560px; }
 .account-danger-zone p { color: var(--text-muted); font-size: 14px; }
 .delete-confirmation { margin-top: 16px; border-left: 3px solid #B42318; padding-left: 12px; }

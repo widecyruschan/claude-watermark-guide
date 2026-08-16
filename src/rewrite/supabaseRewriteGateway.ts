@@ -1,12 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-import {
-  BeginRewriteRequest,
-  CompleteRewriteRequest,
-  FailRewriteRequest,
-  AccountDeletionError,
-} from './rewriteService';
+import { BeginRewriteRequest, CompleteRewriteRequest, FailRewriteRequest } from './rewriteService';
 import type { RewriteAuthenticator, RewriteRepository } from './rewriteService';
 import { RewriteError, type RewriteErrorCode } from './rewriteService';
 
@@ -35,18 +30,7 @@ const DATABASE_ERROR_CODES: ReadonlyArray<[string, RewriteErrorCode]> = [
   ['REQUEST_ID_CONFLICT', 'IDEMPOTENCY_CONFLICT'],
 ];
 
-const RECENT_AUTHENTICATION_WINDOW_MS = 10 * 60 * 1000;
-
-export interface AccountDeletionGateway {
-  deleteRecentlyAuthenticatedUser(
-    authorizationHeader: string | undefined,
-    requestId: string,
-  ): Promise<void>;
-}
-
-export class SupabaseRewriteGateway
-  implements RewriteAuthenticator, RewriteRepository, AccountDeletionGateway
-{
+export class SupabaseRewriteGateway implements RewriteAuthenticator, RewriteRepository {
   private readonly client: SupabaseClient;
 
   constructor(supabaseUrl: string, serviceRoleKey: string) {
@@ -73,61 +57,6 @@ export class SupabaseRewriteGateway
     }
 
     return { userId: data.user.id };
-  }
-
-  async deleteRecentlyAuthenticatedUser(
-    authorizationHeader: string | undefined,
-    requestId: string,
-  ): Promise<void> {
-    const tokenMatch = /^Bearer ([^\s]+)$/u.exec(authorizationHeader ?? '');
-
-    if (!tokenMatch?.[1]) {
-      throw new RewriteError('AUTHENTICATION_REQUIRED');
-    }
-
-    const { data: userData, error: userError } = await this.client.auth.getUser(tokenMatch[1]);
-    const lastSignInAt = userData.user?.last_sign_in_at;
-    const lastSignInTime = lastSignInAt ? Date.parse(lastSignInAt) : Number.NaN;
-
-    if (userError || !userData.user) {
-      throw new RewriteError('AUTHENTICATION_REQUIRED');
-    }
-
-    if (
-      !Number.isFinite(lastSignInTime) ||
-      Date.now() - lastSignInTime > RECENT_AUTHENTICATION_WINDOW_MS
-    ) {
-      throw new AccountDeletionError('RECENT_AUTHENTICATION_REQUIRED');
-    }
-
-    const { error: anonymizeError } = await this.client.rpc('anonymize_deleted_member', {
-      p_request_id: requestId,
-      p_user_id: userData.user.id,
-    });
-
-    if (anonymizeError) {
-      console.error(
-        JSON.stringify({
-          event: 'account_anonymize_failed',
-          requestId,
-          userId: userData.user.id,
-        }),
-      );
-      throw new AccountDeletionError('ACCOUNT_DELETE_UNAVAILABLE');
-    }
-
-    const { error: deleteError } = await this.client.auth.admin.deleteUser(userData.user.id, true);
-
-    if (deleteError) {
-      console.error(
-        JSON.stringify({
-          event: 'account_delete_failed',
-          requestId,
-          userId: userData.user.id,
-        }),
-      );
-      throw new AccountDeletionError('ACCOUNT_DELETE_UNAVAILABLE');
-    }
   }
 
   async beginRewriteRequest(input: BeginRewriteRequest) {

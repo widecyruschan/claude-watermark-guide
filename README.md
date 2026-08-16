@@ -9,6 +9,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - TypeScript / Hono / Zod
 - Vitest / ESLint / Prettier
 - Supabase Auth / Postgres / Row Level Security
+- Stripe Checkout / Customer Portal / signed Webhooks
 
 ## 结构
 - `index.html`                首頁（hero + 工具卡 + 導航卡）
@@ -32,6 +33,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `docs/prd/backend-membership-prd.md` 後台、會員、訂閱與管理功能 PRD
 - `docs/operations/supabase-phase2.md` Supabase 環境、Auth、部署與管理員操作手冊
 - `docs/operations/ebond-phase3.md` EBond 重寫 API、冪等、計費與聯調運維手冊
+- `docs/operations/stripe-phase5.md` Stripe Checkout、Portal、Webhook 與 Test mode 運維手冊
 - `sitemap.xml` / `robots.txt` SEO 索引
 
 ## 已確認的產品設定
@@ -293,3 +295,13 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：更新所有 HTML header、會員導航狀態切換、導航回歸測試及完整公開路由 smoke test；未建立或提交任何 Secret、`.env` 或 `.dev.vars`。
 - 驗證結果：所有頁面源碼導航矩陣通過；`npm run check`、`npm run test:e2e`（5 項）及完整 Pages smoke 路由檢查通過。
 - 後續建議：部署後在 `watermarklens.com/privacy`、`/terms`、`/cookie`、`/login` 及 `/404` 實際點擊確認自訂網域 rewrite 規則與導航一致。
+
+### 2026-08-16：實作 Phase 5 Stripe 訂閱帳單
+- 會話主要目的：建立 Stripe Test mode Checkout、Customer Portal、signed Webhook 及會員帳單狀態流程。
+- 完成的主要任務：加入 server-only Pro Price mapping、已驗證 Checkout／Portal API、raw-body Webhook signature、事件冪等及順序保護、Subscription／Usage Period 同步、週期結束取消、固定三日 past-due 寬限、會員帳單操作介面，以及刪除帳戶前先取消仍可收費的 Stripe Subscription。
+- 關鍵決策和解決方案：瀏覽器只可提交空 JSON，不可選擇 Price 或 redirect origin；完整 Webhook payload 不落庫；Stripe identifier 只供 service-role 使用；Checkout、Subscription 及 Invoice 使用獨立事件水位及嚴格 identifier 配對，防止舊 Session／Subscription 覆寫目前帳單；正式價格未確認前不建立 Product／Price 或啟用 production Checkout。
+- 使用的技術棧：Stripe Node SDK、Cloudflare Pages Functions、Supabase Auth/Postgres/RLS、TypeScript、Vitest、Playwright。
+- 新增或修改檔案：新增 `src/billing/`、`src/account/`、Phase 5 migration、API／Provider／資料庫／帳戶刪除測試及 `docs/operations/stripe-phase5.md`；更新會員帳戶頁、重寫 entitlement、Wrangler binding、package 工具鏈及本 README。
+- 驗證結果：`npm run check`（68 passed、18 skipped）、`npm run test:database`（18 passed）、`npm run test:e2e`（5 passed）、Supabase schema lint、`npm audit`、`git diff --check` 及 Secret 掃描均通過；signed fixture 已完整通過 Worker API 至 Supabase，但尚未使用真實 Stripe Test mode credential。
+- 安全狀態：未使用或提交任何真實 Stripe Secret、`.env` 或 `.dev.vars`；正式 Pro 價格、幣別、Product、Price ID、API Secret 及 Webhook Secret 仍未配置。
+- 後續建議：確認 Pro 月費及幣別後，在 Stripe Test mode 建立 Product／Price，配置 Customer Portal、Webhook endpoint 及 Cloudflare encrypted Secrets，再用新建測試會員完成真實生命週期驗收。

@@ -75,6 +75,26 @@
           </div>
         </dl>
 
+        <section id="billingActions" class="account-billing" hidden aria-labelledby="billingTitle">
+          <h2 id="billingTitle">Subscription billing</h2>
+          <p id="billingActionMessage">Loading billing options…</p>
+          <div class="auth-actions">
+            <button id="startCheckoutButton" class="btn" type="button" hidden disabled>
+              Upgrade to Pro
+            </button>
+            <button
+              id="openBillingPortalButton"
+              class="btn btn-secondary"
+              type="button"
+              hidden
+              disabled
+            >
+              Manage billing
+            </button>
+          </div>
+          <p id="billingActionStatus" class="auth-status" role="status" aria-live="polite"></p>
+        </section>
+
         <div class="auth-actions">
           <a class="btn" href="/checker">Open Free Checker</a>
           <a class="btn btn-secondary" href="/rewrite">Open AI Rewriter</a>

@@ -18,6 +18,7 @@ const binaryExtensions = new Set([
 const secretPatterns = [
   ['API key', /\bsk-[A-Za-z0-9_-]{16,}\b/u],
   ['Stripe secret key', /\b(?:r|s)k_(?:live|test)_[A-Za-z0-9]{16,}\b/u],
+  ['Stripe webhook secret', /\bwhsec_[A-Za-z0-9]{16,}\b/u],
   ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{20,}\b/u],
   ['JWT', /\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/u],
   ['Private key', /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u],
