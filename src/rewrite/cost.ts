@@ -1,8 +1,8 @@
-const INPUT_COST_TENTHS_OF_MICROUSD = 6n;
-const OUTPUT_COST_TENTHS_OF_MICROUSD = 36n;
+const INPUT_COST_TENTHS_OF_MICROUSD = 5n;
+const OUTPUT_COST_TENTHS_OF_MICROUSD = 30n;
 const TENTHS_PER_MICROUSD = 10n;
 
-export function calculateEbondAiCostMicrousd(inputTokens: number, outputTokens: number): number {
+export function calculateWenwenCostMicrousd(inputTokens: number, outputTokens: number): number {
   if (
     !Number.isSafeInteger(inputTokens) ||
     !Number.isSafeInteger(outputTokens) ||

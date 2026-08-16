@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { createApiApp, successResponse, validateJsonBody } from '../../src/api/app';
 
 const bindings = {
-  EBOND_API_KEY: 'test-secret-must-not-leak',
-  EBOND_BASE_URL: 'https://api.ebondai.com',
-  EBOND_MODEL: 'gpt-5.5',
+  REWRITE_API_KEY: 'test-secret-must-not-leak',
+  REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+  REWRITE_MODEL: 'gpt-5.5',
 };
 
 afterEach(() => {
@@ -37,7 +37,7 @@ describe('GET /api/v1/health', () => {
       },
       requestId,
     });
-    expect(JSON.stringify(body)).not.toContain(bindings.EBOND_API_KEY);
+    expect(JSON.stringify(body)).not.toContain(bindings.REWRITE_API_KEY);
   });
 });
 

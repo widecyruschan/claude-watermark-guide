@@ -1,4 +1,4 @@
-# EBond Phase 3 運維手冊
+# AI 重寫供應商 Phase 3 運維手冊
 
 ## API 合約
 
@@ -17,22 +17,24 @@
 公開變數保存在 `wrangler.toml`：
 
 ```text
-EBOND_BASE_URL=https://api.ebondai.com
-EBOND_API_MODE=responses
-EBOND_MODEL=gpt-5.5
+REWRITE_BASE_URL=https://breakout.wenwen-ai.com
+REWRITE_API_MODE=chat_completions
+REWRITE_MODEL=gpt-5.5
 SUPABASE_URL=https://PROJECT_REF.supabase.co
 ```
 
 以下值只可使用 Cloudflare Pages production Secret，不得寫入 Git、日誌、`.env` 或 `.dev.vars`：
 
 ```text
-EBOND_API_KEY
+REWRITE_API_KEY
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
-啟動 Provider 前會驗證 `EBOND_API_KEY` 只包含可安全放入 HTTP Header 的可打印 ASCII 字元。格式錯誤只回傳 `PROVIDER_CONFIGURATION_ERROR`，不會記錄或回傳 Secret 值。
+啟動 Provider 前會驗證 `REWRITE_API_KEY` 只包含可安全放入 HTTP Header 的可打印 ASCII 字元。格式錯誤只回傳 `PROVIDER_CONFIGURATION_ERROR`，不會記錄或回傳 Secret 值。
 
-`responses` 是預設協議。只有完成真實相容性測試並證明 Responses 不可用或缺少完整 usage 時，才可將 `EBOND_API_MODE` 明確改為 `chat_completions`。每個請求只使用一種協議，避免雙重供應商計費。
+問問現時以 OpenAI-compatible Chat Completions 提供 `gpt-5.5`，正式 endpoint 為 `POST /v1/chat/completions`。每個請求只使用一種協議，避免自動回退造成雙重供應商計費。
+
+程式只接受上述 `REWRITE_*` binding，不會讀取或混用舊 `EBOND_*` 值。完成 production 切換後，可從 Cloudflare 刪除舊 `EBOND_API_KEY`。
 
 ## 配額與冪等
 
@@ -40,14 +42,14 @@ SUPABASE_SERVICE_ROLE_KEY
 
 同一會員重用相同 Idempotency Key 時：
 
-- `processing`、`succeeded`、`failed` 均不會再次呼叫 EBond。
+- `processing`、`succeeded`、`failed` 均不會再次呼叫問問 API。
 - 相同 Key 搭配不同輸入雜湊會回傳衝突。
 - 原文與結果不寫入 `rewrite_requests` 或 `usage_ledger`。
 
-EBond 成本以整數 micro-USD 記錄：
+問問 `gpt-5.5` 成本以整數 micro-USD 記錄：
 
 ```text
-round(input_tokens * 0.6 + output_tokens * 3.6)
+round(input_tokens * 0.5 + output_tokens * 3.0)
 ```
 
 ## 失敗與日誌
@@ -64,10 +66,10 @@ round(input_tokens * 0.6 + output_tokens * 3.6)
 REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
 ```
 
-## 2026-08-16 聯調狀態
+## 2026-08-17 供應商切換狀態
 
-Supabase development/production 的 claim、settle、release、RLS 與重複 Key 測試均通過。Cloudflare Pages production 已配置 `EBOND_API_KEY` 及 `SUPABASE_SERVICE_ROLE_KEY` 兩個加密 Secret；EBond 公開設定統一為 `https://api.ebondai.com`、`gpt-5.5` 及 `responses`。
+程式及 migration 已切換至 `provider='wenwen'`，歷史 `provider='ebond'` 記錄不會被改寫。公開設定統一為 `https://breakout.wenwen-ai.com`、`gpt-5.5` 及 `chat_completions`。
 
-更新 production Secret 後，以不記錄 Key、請求文字或回應內容的最小直連檢查驗證：`GET /v1/models` 返回 HTTP 200 並包含 `gpt-5.5`；`POST /v1/responses` 返回 HTTP 200，且回應包含完整 input/output Token usage。這表示新 Key、帳戶權限、Responses 相容性及模型路由均可用，先前 Key 無上游 HTTP 狀態的問題已不再重現。
+Production 尚須由帳戶擁有者把問問 Token 設為 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`，並先套用最新 Supabase migration。不得把 Token 放入 `wrangler.toml`、`.env`、`.dev.vars`、GitHub Actions log 或瀏覽器程式碼。
 
-本次維護沒有使用真實會員 JWT 呼叫 production `POST /api/v1/rewrite`，因此 Cloudflare Pages、Supabase 配額及 EBond 的完整 production 端到端流程仍須由下一個受控會員請求確認。production 保持 `responses`；失敗請求會釋放額度，重複 Idempotency Key 不會再次計費。
+完成 Secret 與 migration 後，先以 `GET /v1/models` 確認 `gpt-5.5`，再用受控會員執行一次 production `POST /api/v1/rewrite`。只檢查 HTTP 狀態、模型是否存在、Token usage、配額結算及標準錯誤碼，不打印 API Key、會員 JWT、原文或回應內容。

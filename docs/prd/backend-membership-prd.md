@@ -1,7 +1,7 @@
 # 後台及會員系統 PRD
 
-> 版本：1.1
-> 日期：2026-08-16
+> 版本：1.2
+> 日期：2026-08-17
 > 狀態：Phase 0 產品決策部分已落實
 > 語言：香港繁體中文
 > 產品：Claude Watermark Guide / AI 文字重寫工具
@@ -11,15 +11,15 @@
 
 現有產品是部署於 Cloudflare Pages 的純靜態工具網站，可以在瀏覽器本機檢查部分不可見 Unicode 字符，但尚未提供用戶系統、伺服器端 AI 重寫、用量控制、訂閱收費或營運後台。用戶無法保存會員狀態、查看剩餘配額、購買方案或管理帳單；營運方亦無法控制成本、處理異常帳戶、查看訂閱狀態，或衡量 AI 請求的質素與毛利。
 
-產品需要保留「本機清理字符，不上傳文字」的優勢，同時加入由 EBond API `gpt-5.5` 驅動的 AI 文字重寫功能，並建立完整但不過度複雜的會員、訂閱、配額及管理後台。系統亦必須避免把「清理不可見字符」錯誤宣傳成可以識別 AI 來源、移除可靠水印，或保證繞過 AI 偵測。
+產品需要保留「本機清理字符，不上傳文字」的優勢，同時加入由問問 API `gpt-5.5` 驅動的 AI 文字重寫功能，並建立完整但不過度複雜的會員、訂閱、配額及管理後台。系統亦必須避免把「清理不可見字符」錯誤宣傳成可以識別 AI 來源、移除可靠水印，或保證繞過 AI 偵測。
 
 目前已確認的基本條件：
 
 - 前端主體已完成，目前使用原生 HTML、CSS 及 JavaScript。
-- 網站部署於 Cloudflare Pages，production 環境已配置加密的 `EBOND_API_KEY`。
-- EBond 網關根地址為 `https://api.ebondai.com`，模型為 `gpt-5.5`。
-- EBond 價格按每百萬 input/output Token `US$0.6/US$3.6` 估算。
-- 優先使用 Responses API，Chat Completions 只作相容回退。
+- 網站部署於 Cloudflare Pages，production 環境須配置加密的 `REWRITE_API_KEY`。
+- 問問網關根地址為 `https://breakout.wenwen-ai.com`，模型為 `gpt-5.5`。
+- 問問價格按每百萬 input/output Token `US$0.5/US$3.0` 估算。
+- 使用 OpenAI-compatible Chat Completions API，不自動回退至另一協議。
 - 預設不保存用戶提交的原文或模型生成的完整結果。
 - 正式網域為 `watermarklens.com`，私隱及支援聯絡電郵為 `contact@watermarklens.com`。
 - 首發市場為美國，產品及服務介面使用英文。
@@ -139,7 +139,7 @@
 - 計算配額前移除開首及結尾的無關空白，但不改變內部內容。
 - 保留意思、事實、命名實體、數字、日期、引文、引用、連結及段落結構。
 - 不承諾「由人撰寫」、「無法偵測」，或任何保證通過偵測器的結果。
-- Responses API streaming 通過驗證後才使用串流輸出；否則首發使用非串流回應，並保留相同 API contract 版本。
+- 首發使用非串流 Chat Completions 回應；日後只有在驗證供應商串流事件及中止計費語義後，才在相同 API contract 版本加入串流。
 - 每次重寫使用唯一 request ID 及 Idempotency Key。
 - 呼叫供應商前，以原子操作預留輸入字符配額。
 - 成功後結算實際 Token 用量及估算成本。
@@ -208,9 +208,9 @@
 - 使用 Supabase Auth 管理身份，使用 Supabase Postgres 保存會員、用量及審計資料。
 - 使用 Postgres function 或 transaction 預留、結算及釋放配額。
 - 使用 Stripe 託管的 Checkout 及 Customer Portal，不自行建立付款表格。
-- Pages Functions 直接呼叫 EBond；EBond Key 只以 production Secret 形式存在。
-- 把 EBond 供應商封裝於小型 adapter，讓 Responses 及 Chat Completions 共用同一內部結果格式。
-- 把 Stripe、Supabase 及 EBond 視為外部信任邊界，回傳回應前先把其錯誤標準化。
+- Pages Functions 直接呼叫問問 API；問問 Token 只以 production Secret 形式存在。
+- 把 OpenAI-compatible 供應商封裝於小型 adapter，並把供應商回應轉換成中立的內部結果格式。
+- 把 Stripe、Supabase 及問問 API 視為外部信任邊界，回傳回應前先把其錯誤標準化。
 
 ### 請求流程
 
@@ -220,7 +220,7 @@ sequenceDiagram
     participant P as Pages 介面
     participant F as Pages Function
     participant D as Supabase
-    participant E as EBond API
+    participant E as 問問 API
 
     U->>P: 提交重寫
     P->>F: 已驗證請求 + Idempotency Key
@@ -252,7 +252,7 @@ sequenceDiagram
 | --- | --- | --- |
 | `GET /api/v1/account` | 會員 | 回傳 Profile、方案及訂閱摘要 |
 | `GET /api/v1/usage` | 會員 | 回傳目前週期配額及彙總用量 |
-| `POST /api/v1/rewrite` | 會員 | 驗證、預留配額、呼叫 EBond 並結算用量 |
+| `POST /api/v1/rewrite` | 會員 | 驗證、預留配額、呼叫問問 API 並結算用量 |
 | `POST /api/v1/billing/checkout` | 會員 | 為獲允許方案建立 Stripe Checkout |
 | `POST /api/v1/billing/portal` | Pro 會員 | 建立 Stripe Customer Portal session |
 | `POST /api/v1/webhooks/stripe` | Stripe signature | 以冪等方式同步帳單狀態 |
@@ -267,7 +267,7 @@ sequenceDiagram
 
 ### 私隱及安全
 
-- 絕不把 EBond、Supabase service-role 或 Stripe Secret Key 放入前端程式碼、Wrangler 明文變數、GitHub 原始碼或日誌。
+- 絕不把問問 Token、Supabase service-role 或 Stripe Secret Key 放入前端程式碼、Wrangler 明文變數、GitHub 原始碼或日誌。
 - 把非敏感 base URL、model ID 及公開 Supabase Key 與加密 Secret 分開管理。
 - 在伺服器驗證 JWT signature、issuer、audience 及到期時間。
 - 即使 API 已有授權檢查，仍必須執行 RLS。
@@ -277,7 +277,7 @@ sequenceDiagram
 - 解析 JSON 前先限制 request body 大小。
 - 從日誌移除 Authorization header、Cookie、提交文字及生成文字。
 - 設定每日全域供應商成本上限；達到上限後回傳受控的服務暫停回應。
-- 啟用 AI 請求前更新 Privacy 及 Terms 頁面，列明 EBond、Supabase、Stripe 及 Cloudflare 等相關資料處理或基礎設施供應商。
+- 啟用 AI 請求前更新 Privacy 及 Terms 頁面，列明問問、Supabase、Stripe 及 Cloudflare 等相關資料處理或基礎設施供應商。
 
 ### 可觀察性
 
@@ -292,7 +292,7 @@ sequenceDiagram
 
 ### 主要測試邊界
 
-1. 重寫流程邊界：由已驗證 API 請求一直測試至配額結算，並以 deterministic mock 取代 EBond。此高層測試一次驗證資料驗證、entitlement、冪等、配額行為、輸出 contract 及已清理錯誤。
+1. 重寫流程邊界：由已驗證 API 請求一直測試至配額結算，並以 deterministic mock 取代問問 API。此高層測試一次驗證資料驗證、entitlement、冪等、配額行為、輸出 contract 及已清理錯誤。
 2. 帳單流程邊界：由已簽署的 Stripe Webhook 一直測試至同步訂閱 entitlement，並在重複及順序錯亂事件後驗證資料庫狀態。
 3. 管理流程邊界：由受角色保護的 API 請求一直測試至審計記錄建立，同時驗證授權及可見的支援資料。
 
@@ -302,7 +302,7 @@ sequenceDiagram
 - API contract 測試涵蓋空白、過大及無效選項輸入。
 - 身份驗證測試涵蓋缺少、已過期、格式錯誤及 audience 錯誤的 Token。
 - 配額測試涵蓋剛好達上限、超出一個字符、並行預留、供應商故障、取消、重試及重複 Idempotency Key。
-- 供應商 adapter 測試涵蓋 Responses 成功／串流、Chat Completions 回退、格式錯誤回應、逾時、rate limit 及缺少 usage。
+- 供應商 adapter 測試涵蓋 Chat Completions 成功、格式錯誤回應、逾時、rate limit 及缺少 usage。
 - 帳單測試涵蓋 Checkout 擁有權、有效／無效 signature、重複 Webhook、順序錯亂事件、取消、past due、寬限期及刪除。
 - RLS 測試證明用戶不能讀取或修改其他用戶的記錄，亦不能自行提升權限。
 - Admin 測試證明會員會收到 forbidden 回應，而且每項 mutation 均會建立 audit entry。
@@ -369,13 +369,13 @@ sequenceDiagram
 - 並行配額預留不能超出 allowance。
 - 瀏覽器不能修改方案、角色、訂閱或 Usage Ledger。
 
-### Phase 3 — EBond AI 重寫 API
+### Phase 3 — 問問 AI 重寫 API
 
 工作：
 
-- 使用 `gpt-5.5` 實作 EBond provider adapter。
-- 使用已配置、接近 production 的 development Key 驗證 Responses API。
-- 只有 Responses 相容性失敗或不完整時，才實作 Chat Completions 回退。
+- 使用 `gpt-5.5` 實作 OpenAI-compatible provider adapter。
+- 使用已配置、接近 production 的 development Token 驗證 Chat Completions API。
+- 每次請求固定使用 Chat Completions，避免跨協議重試造成重複供應商成本。
 - 建立有版本的重寫 system prompt 及 input contract。
 - 實作身份驗證、帳戶狀態檢查、body limit、validation 及配額預留。
 - 實作供應商 timeout、取消、重試政策及標準化錯誤。
@@ -388,7 +388,7 @@ sequenceDiagram
 - 評測集達到已同意的意思保留門檻。
 - 重複 Idempotency Key 絕不產生重複收費。
 - 供應商呼叫失敗後恢復配額。
-- 成本計算在 rounding tolerance 內符合 EBond input/output 費率。
+- 成本計算在 rounding tolerance 內符合問問 input/output 費率。
 - 日誌及資料庫記錄不含 request 或 response 內容。
 
 ### Phase 4 — 會員介面
@@ -466,7 +466,7 @@ sequenceDiagram
 - 更新 Privacy、Terms 及 Cookie 頁面，說明伺服器端 AI 及付款處理。
 - 加入帳戶刪除及保留帳單資料說明。
 - 執行 dependency、Secret 及 authorization scan。
-- 為 EBond 故障、Supabase 故障及 Stripe Webhook 延遲進行故障演練。
+- 為問問 API 故障、Supabase 故障及 Stripe Webhook 延遲進行故障演練。
 
 驗證：
 
@@ -499,7 +499,7 @@ sequenceDiagram
 - 現有靜態頁面、SEO route 及本機 Checker 繼續正常運作。
 - 本機字符清理不發出任何網絡請求。
 - AI 重寫要求有效會員 session，並在伺服器執行方案上限。
-- EBond Key 及所有其他 Secret 只存在於 Cloudflare 加密 Secret。
+- 問問 Token 及所有其他 Secret 只存在於 Cloudflare 加密 Secret。
 - Free 及 Pro 配額預留使用原子操作，失敗不會消耗最終配額。
 - Stripe test mode 生命週期通過 Checkout、續期、失敗、取消及重複 event 測試。
 - 會員專區準確顯示方案、週期及剩餘字符。
@@ -525,7 +525,7 @@ sequenceDiagram
 
 | 風險 | 緩解措施 |
 | --- | --- |
-| EBond 是第三方轉接服務 | 保留 provider adapter、嚴格 timeout、成本上限及已記錄回退路徑 |
+| 問問是第三方轉接服務 | 保留 provider adapter、嚴格 timeout、成本上限及可回滾的部署版本 |
 | 模型在重寫時改變事實 | 使用嚴格保留 Prompt、評測集、保守預設值及用戶免責聲明 |
 | 並行請求超額使用配額 | 使用原子預留及不可變 Ledger |
 | Stripe event 延遲或次序錯亂 | 使用冪等 event table，並按供應商時間制定狀態轉換規則 |
@@ -537,6 +537,6 @@ sequenceDiagram
 ## 補充說明
 
 - 本 PRD 初稿編寫時，repository 尚未有自動測試 framework、package manifest、Supabase schema 或 Pages Functions source；這些均屬實施交付項目，而不是當時已有功能。
-- Production 已配置 `EBOND_API_KEY`，Wrangler 可以確認加密 binding 而不顯示其值。
+- Production 必須以 Cloudflare encrypted Secret 配置 `REWRITE_API_KEY`；Wrangler 只可確認 binding 存在，不可顯示其值。
 - MVP 已用同一 Pages 專案的 Pages Functions 取代先前建議的獨立 API Worker，因為 Secret 及部署已屬於 Pages 專案。獨立 Worker 可保留作未來擴展選項，但不是首發要求。
 - 首發市場已確認為 US／English。仍待確認的產品決策包括 Pro 正式價格、Free／Pro 月度配額及語氣 allowlist；技術方案不再依賴其他未解決的架構選擇。

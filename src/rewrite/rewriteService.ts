@@ -1,6 +1,6 @@
-import { calculateEbondAiCostMicrousd } from './cost';
+import { calculateWenwenCostMicrousd } from './cost';
 import type { RewriteOptions, RewriteProviderResult } from './contracts';
-import { EbondProviderError, type EbondProviderErrorCode } from './ebondProvider';
+import { RewriteProviderError, type RewriteProviderErrorCode } from './openAiCompatibleProvider';
 import { REWRITE_PROMPT_VERSION } from './prompt';
 
 export type RewriteErrorCode =
@@ -41,7 +41,7 @@ export interface BeginRewriteRequest {
   inputSha256: string;
   model: string;
   promptVersion: string;
-  provider: 'ebond';
+  provider: 'wenwen';
   requestId: string;
   userId: string;
 }
@@ -55,7 +55,7 @@ export interface CompleteRewriteRequest {
 }
 
 export interface FailRewriteRequest {
-  errorCode: EbondProviderErrorCode;
+  errorCode: RewriteProviderErrorCode;
   requestId: string;
   userId: string;
 }
@@ -116,7 +116,7 @@ export async function executeRewrite(
     inputSha256,
     model: input.model,
     promptVersion: REWRITE_PROMPT_VERSION,
-    provider: 'ebond',
+    provider: 'wenwen',
     requestId: input.requestId,
     userId: input.userId,
   });
@@ -141,7 +141,9 @@ export async function executeRewrite(
     );
   } catch (error) {
     const providerError =
-      error instanceof EbondProviderError ? error : new EbondProviderError('PROVIDER_UNAVAILABLE');
+      error instanceof RewriteProviderError
+        ? error
+        : new RewriteProviderError('PROVIDER_UNAVAILABLE');
 
     try {
       await runtime.repository.failRewriteRequest({
@@ -175,7 +177,7 @@ export async function executeRewrite(
     throw providerError;
   }
 
-  const costMicrousd = calculateEbondAiCostMicrousd(
+  const costMicrousd = calculateWenwenCostMicrousd(
     providerResult.inputTokens,
     providerResult.outputTokens,
   );
@@ -254,7 +256,7 @@ async function createSha256(value: string): Promise<string> {
 interface RewriteLogFields {
   costMicrousd?: number;
   durationMs: number;
-  errorCode?: EbondProviderErrorCode | RewriteErrorCode;
+  errorCode?: RewriteProviderErrorCode | RewriteErrorCode;
   event:
     | 'rewrite_completed'
     | 'rewrite_provider_failed'

@@ -32,7 +32,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `supabase/`                 本機 Auth 設定、資料庫 schema 與方案 seed migrations
 - `docs/prd/backend-membership-prd.md` 後台、會員、訂閱與管理功能 PRD
 - `docs/operations/supabase-phase2.md` Supabase 環境、Auth、部署與管理員操作手冊
-- `docs/operations/ebond-phase3.md` EBond 重寫 API、冪等、計費與聯調運維手冊
+- `docs/operations/rewrite-provider-phase3.md` AI 重寫 API、冪等、計費與聯調運維手冊
 - `docs/operations/stripe-phase5.md` Stripe Checkout、Portal、Webhook 與 Test mode 運維手冊
 - `sitemap.xml` / `robots.txt` SEO 索引
 
@@ -50,7 +50,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - 文章頁真實來源引用（Help Center / Forbes / Reddit）
 - `/checker` 是否繼續允許搜尋引擎索引（sitemap 目前包含此頁）
 - Privacy、Cookie、Terms 草案的正式法律審核、營運主體名稱、適用州法及爭議處理條款
-- EBond 的合約資料保留期；production 帳戶及 `gpt-5.5` Responses 路由已驗證可用
+- 問問 API 的合約資料保留期；production `REWRITE_API_KEY` 及完整會員重寫流程仍待驗證
 
 ## 部署到 Cloudflare Pages
 1. 使用 Node.js 22 安裝依賴：`npm ci`
@@ -305,3 +305,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 驗證結果：`npm run check`（68 passed、18 skipped）、`npm run test:database`（18 passed）、`npm run test:e2e`（5 passed）、Supabase schema lint、`npm audit`、`git diff --check` 及 Secret 掃描均通過；signed fixture 已完整通過 Worker API 至 Supabase，但尚未使用真實 Stripe Test mode credential。
 - 安全狀態：未使用或提交任何真實 Stripe Secret、`.env` 或 `.dev.vars`；正式 Pro 價格、幣別、Product、Price ID、API Secret 及 Webhook Secret 仍未配置。
 - 後續建議：確認 Pro 月費及幣別後，在 Stripe Test mode 建立 Product／Price，配置 Customer Portal、Webhook endpoint 及 Cloudflare encrypted Secrets，再用新建測試會員完成真實生命週期驗收。
+
+### 2026-08-17：AI 重寫供應商切換至問問 API
+- 會話主要目的：處理 EBond 重寫服務持續不可用，將 `gpt-5.5` 請求切換至問問的 OpenAI-compatible API。
+- 完成的主要任務：以中立 `REWRITE_*` binding 取代舊 `EBOND_*`，並拒絕混用或回退舊供應商設定；更新 endpoint、provider metadata、Token 成本、Supabase 約束、法律披露、PRD、運維手冊及測試。
+- 關鍵決策和解決方案：production 固定使用 `https://breakout.wenwen-ai.com/v1/chat/completions`；新請求記錄為 `wenwen`，歷史 `ebond` 記錄保留；成本按每百萬 input/output Token `US$0.5/US$3.0` 以整數 micro-USD 結算；API Token 只可存於 Cloudflare encrypted Secret `REWRITE_API_KEY`。
+- 使用的技術棧：Cloudflare Pages Functions、TypeScript、Hono、OpenAI-compatible Chat Completions、Supabase Postgres/RLS、Vitest、Playwright。
+- 新增或修改檔案：新增供應商切換 migration；將 EBond adapter／測試／運維文件改為供應商中立命名；更新 API runtime、成本、資料庫整合測試、Wrangler 非敏感變量、Privacy、Terms、PRD 及本 README；未建立、讀取或提交任何 API Key、`.env` 或 `.dev.vars`。
+- 驗證結果：`npm run check`（67 passed、18 skipped）、`npm run test:database`（18 passed）、`npm run test:e2e`（5 passed）、Supabase schema lint、官方 npm registry audit（0 vulnerabilities）、`git diff --check` 及 Secret 掃描均通過。
+- 後續建議：部署前在 production 套用 `20260817010000_switch_rewrite_provider_to_wenwen.sql`，再把問問 Token 設為 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`；部署後以受控會員請求驗證模型、usage、配額結算和錯誤釋放，且不得打印 Token、JWT、原文或輸出。

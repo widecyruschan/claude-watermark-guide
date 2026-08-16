@@ -151,9 +151,9 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 5 Stripe billing lifecycle', () 
       undefined,
       {
         APP_BASE_URL: 'https://watermarklens.com',
-        EBOND_API_KEY: 'fixture-not-used',
-        EBOND_BASE_URL: 'https://api.ebondai.com',
-        EBOND_MODEL: 'gpt-5.5',
+        REWRITE_API_KEY: 'fixture-not-used',
+        REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+        REWRITE_MODEL: 'gpt-5.5',
         STRIPE_PRO_PRICE_ID: 'price_test_pro_monthly',
         STRIPE_SECRET_KEY: 'sk_test_fixture_only_not_a_real_secret',
         STRIPE_WEBHOOK_SECRET: webhookSecret,

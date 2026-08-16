@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { EbondProvider } from '../../src/rewrite/ebondProvider';
+import { OpenAiCompatibleProvider } from '../../src/rewrite/openAiCompatibleProvider';
 
 // Regression: ISSUE-007 — Provider transport failures did not distinguish gateway auth from model calls
 // Found by /qa on 2026-08-16
 // Report: .gstack/qa-reports/qa-report-watermarklens-com-2026-08-15.md
-describe('EBond provider connectivity diagnostics', () => {
+describe('rewrite provider connectivity diagnostics', () => {
   it('records only model availability and HTTP status after a transport failure', async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -16,9 +16,9 @@ describe('EBond provider connectivity diagnostics', () => {
           status: 200,
         }),
       );
-    const provider = new EbondProvider({
+    const provider = new OpenAiCompatibleProvider({
       apiKey: 'sk-provider-secret',
-      baseUrl: 'https://api.ebondai.com',
+      baseUrl: 'https://breakout.wenwen-ai.com',
       enableConnectivityProbe: true,
       fetch: fetchMock,
       model: 'gpt-5.5',

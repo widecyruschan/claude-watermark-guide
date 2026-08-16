@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { createApiApp } from '../../src/api/app';
 
 const bindings = {
-  EBOND_API_KEY: 'provider-secret-must-not-leak',
-  EBOND_BASE_URL: 'https://api.ebondai.com',
-  EBOND_MODEL: 'gpt-5.5',
+  REWRITE_API_KEY: 'provider-secret-must-not-leak',
+  REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+  REWRITE_MODEL: 'gpt-5.5',
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_browser-safe-test-key',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-secret-must-not-leak',
   SUPABASE_URL: 'https://project-ref.supabase.co',
@@ -33,7 +33,7 @@ describe('GET /api/v1/auth/config', () => {
     });
 
     const serializedBody = JSON.stringify(body);
-    expect(serializedBody).not.toContain(bindings.EBOND_API_KEY);
+    expect(serializedBody).not.toContain(bindings.REWRITE_API_KEY);
     expect(serializedBody).not.toContain(bindings.SUPABASE_SERVICE_ROLE_KEY);
   });
 

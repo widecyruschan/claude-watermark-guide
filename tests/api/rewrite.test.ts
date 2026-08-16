@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiApp } from '../../src/api/app';
-import { EbondProviderError } from '../../src/rewrite/ebondProvider';
+import { RewriteProviderError } from '../../src/rewrite/openAiCompatibleProvider';
 import { RewriteError, type RewriteRuntime } from '../../src/rewrite/rewriteService';
 
 const bindings = {
-  EBOND_API_KEY: 'provider-key-must-not-leak',
-  EBOND_BASE_URL: 'https://api.ebondai.com',
-  EBOND_MODEL: 'gpt-5.5',
+  REWRITE_API_KEY: 'provider-key-must-not-leak',
+  REWRITE_API_MODE: 'chat_completions',
+  REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+  REWRITE_MODEL: 'gpt-5.5',
   SUPABASE_SERVICE_ROLE_KEY: 'database-key-must-not-leak',
   SUPABASE_URL: 'https://example.supabase.co',
 };
@@ -89,12 +90,12 @@ describe('POST /api/v1/rewrite', () => {
       inputSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
       model: 'gpt-5.5',
       promptVersion: 'rewrite-v1.1.0',
-      provider: 'ebond',
+      provider: 'wenwen',
       requestId: idempotencyKey,
       userId,
     });
     expect(runtime.repository.completeRewriteRequest).toHaveBeenCalledWith({
-      costMicrousd: 600,
+      costMicrousd: 500,
       inputTokens: 250,
       outputTokens: 125,
       requestId: idempotencyKey,
@@ -106,7 +107,7 @@ describe('POST /api/v1/rewrite', () => {
     expect(serializedLogs).not.toContain('Original text.');
     expect(serializedLogs).not.toContain('A natural rewrite.');
     expect(serializedLogs).not.toContain('user-jwt-must-not-leak');
-    expect(serializedLogs).not.toContain(bindings.EBOND_API_KEY);
+    expect(serializedLogs).not.toContain(bindings.REWRITE_API_KEY);
     expect(serializedLogs).not.toContain(bindings.SUPABASE_SERVICE_ROLE_KEY);
   });
 
@@ -140,7 +141,7 @@ describe('POST /api/v1/rewrite', () => {
   it('releases reserved quota after an eligible provider failure', async () => {
     const runtime = createSuccessfulRuntime();
     vi.mocked(runtime.provider.rewrite).mockRejectedValue(
-      new EbondProviderError('PROVIDER_UNAVAILABLE'),
+      new RewriteProviderError('PROVIDER_UNAVAILABLE'),
     );
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const app = createApiApp({ rewriteRuntimeFactory: () => runtime });
@@ -160,6 +161,47 @@ describe('POST /api/v1/rewrite', () => {
     });
     expect(runtime.repository.completeRewriteRequest).not.toHaveBeenCalled();
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain('Sensitive original.');
+  });
+
+  it('does not accept legacy provider bindings after the cutover', async () => {
+    const runtime = createSuccessfulRuntime();
+    const app = createApiApp({ rewriteRuntimeFactory: () => runtime });
+    const response = await app.request(createRequest('Original text.'), undefined, {
+      ...bindings,
+      EBOND_API_KEY: 'legacy-provider-key-must-not-leak',
+      EBOND_API_MODE: 'responses',
+      EBOND_BASE_URL: 'https://legacy-provider.example',
+      EBOND_MODEL: 'gpt-5.5',
+      REWRITE_API_KEY: undefined,
+      REWRITE_API_MODE: undefined,
+      REWRITE_BASE_URL: undefined,
+      REWRITE_MODEL: undefined,
+    });
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'PROVIDER_CONFIGURATION_ERROR' },
+      success: false,
+    });
+    expect(runtime.repository.beginRewriteRequest).not.toHaveBeenCalled();
+    expect(runtime.provider.rewrite).not.toHaveBeenCalled();
+  });
+
+  it('rejects Responses mode for the new provider bindings', async () => {
+    const runtime = createSuccessfulRuntime();
+    const app = createApiApp({ rewriteRuntimeFactory: () => runtime });
+    const response = await app.request(createRequest('Original text.'), undefined, {
+      ...bindings,
+      REWRITE_API_MODE: 'responses',
+    });
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'PROVIDER_CONFIGURATION_ERROR' },
+      success: false,
+    });
+    expect(runtime.repository.beginRewriteRequest).not.toHaveBeenCalled();
+    expect(runtime.provider.rewrite).not.toHaveBeenCalled();
   });
 
   it('keeps the reservation and logs safely when settlement fails after provider success', async () => {
@@ -182,7 +224,7 @@ describe('POST /api/v1/rewrite', () => {
     const serializedLogs = JSON.stringify(consoleError.mock.calls);
     expect(serializedLogs).toContain('rewrite_quota_settlement_failed');
     expect(JSON.parse(String(consoleError.mock.calls[0]?.[0]))).toMatchObject({
-      costMicrousd: 600,
+      costMicrousd: 500,
       inputTokens: 250,
       outputTokens: 125,
     });

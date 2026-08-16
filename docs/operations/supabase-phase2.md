@@ -84,7 +84,7 @@ Hosted development 及 production 專案不會讀取本機 `.env.local`。必須
 ### Phase 4 會員介面及帳戶刪除
 
 - `/rewrite` 為已登入會員的 AI 重寫工作區。訪客可輸入及保留本機草稿，但不能提交；Checker 仍完全免登入且不發出網絡請求。
-- 重寫草稿只存入當前分頁的 `sessionStorage`，不會寫入 Supabase、Cloudflare log、Plausible 或 EBond 以外的服務。session 過期、取消、網絡錯誤或配額錯誤時，草稿會保留。
+- 重寫草稿只存入當前分頁的 `sessionStorage`，不會寫入 Supabase、Cloudflare log 或 Plausible。只有用戶主動提交重寫時，文字才會傳送至目前配置的 AI 供應商；session 過期、取消、網絡錯誤或配額錯誤時，草稿會保留。
 - `/api/v1/account/delete` 只接受會員 JWT。服務端會以 Supabase Auth `last_sign_in_at` 驗證最近 10 分鐘內的登入，然後呼叫 `anonymize_deleted_member` 清除 Profile 顯示名稱、停用產品存取並新增 `account.delete` audit；最後對 Auth 使用者執行 soft delete。
 - `20260816093000_phase4_account_deletion.sql` 必須先在 development push 和驗證，再推送 production；不得讓瀏覽器直接呼叫資料庫函數或看到 service-role key。
 

@@ -4,9 +4,9 @@ import { createApiApp } from '../../src/api/app';
 import { AccountDeletionError } from '../../src/rewrite/rewriteService';
 
 const bindings = {
-  EBOND_API_KEY: 'provider-key-must-not-leak',
-  EBOND_BASE_URL: 'https://api.ebondai.com',
-  EBOND_MODEL: 'gpt-5.5',
+  REWRITE_API_KEY: 'provider-key-must-not-leak',
+  REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+  REWRITE_MODEL: 'gpt-5.5',
   SUPABASE_SERVICE_ROLE_KEY: 'database-key-must-not-leak',
   SUPABASE_URL: 'https://example.supabase.co',
 };

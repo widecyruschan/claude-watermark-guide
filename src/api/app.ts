@@ -22,7 +22,10 @@ import {
   rewriteInputSchema,
   type RewriteInput,
 } from '../rewrite/contracts';
-import { EbondProvider, EbondProviderError } from '../rewrite/ebondProvider';
+import {
+  OpenAiCompatibleProvider,
+  RewriteProviderError,
+} from '../rewrite/openAiCompatibleProvider';
 import {
   AccountDeletionError,
   executeRewrite,
@@ -33,10 +36,10 @@ import { SupabaseRewriteGateway } from '../rewrite/supabaseRewriteGateway';
 
 export interface ApiBindings {
   APP_BASE_URL?: string;
-  EBOND_API_KEY: string;
-  EBOND_API_MODE?: string;
-  EBOND_BASE_URL: string;
-  EBOND_MODEL: string;
+  REWRITE_API_KEY?: string;
+  REWRITE_API_MODE?: string;
+  REWRITE_BASE_URL?: string;
+  REWRITE_MODEL?: string;
   STRIPE_PRO_PRICE_ID?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
@@ -317,7 +320,7 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       const body = context.get('validatedBody') as RewriteInput;
       const result = await executeRewrite(context.get('rewriteRuntime'), {
         cancellationSignal: context.req.raw.signal,
-        model: context.env.EBOND_MODEL,
+        model: getRewriteConfiguration(context.env).model,
         options: body.options,
         requestId: idempotencyKey.data,
         text: body.text,
@@ -422,7 +425,7 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
     if (
       error instanceof BillingError ||
       error instanceof RewriteError ||
-      error instanceof EbondProviderError ||
+      error instanceof RewriteProviderError ||
       error instanceof AccountDeletionError
     ) {
       return errorResponse(context, mapServiceError(error));
@@ -444,6 +447,7 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
 }
 
 function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
+  const rewriteConfiguration = getRewriteConfiguration(bindings);
   const supabaseGateway = new SupabaseRewriteGateway(
     bindings.SUPABASE_URL,
     bindings.SUPABASE_SERVICE_ROLE_KEY,
@@ -451,15 +455,31 @@ function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
 
   return {
     authenticator: supabaseGateway,
-    provider: new EbondProvider({
-      apiKey: bindings.EBOND_API_KEY,
-      apiMode: bindings.EBOND_API_MODE === 'chat_completions' ? 'chat_completions' : 'responses',
-      baseUrl: bindings.EBOND_BASE_URL,
+    provider: new OpenAiCompatibleProvider({
+      apiKey: rewriteConfiguration.apiKey,
+      baseUrl: rewriteConfiguration.baseUrl,
       enableConnectivityProbe: true,
-      model: bindings.EBOND_MODEL,
+      model: rewriteConfiguration.model,
     }),
     repository: supabaseGateway,
   };
+}
+
+function getRewriteConfiguration(bindings: ApiBindings): {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+} {
+  const apiKey = bindings.REWRITE_API_KEY?.trim();
+  const apiMode = bindings.REWRITE_API_MODE ?? 'chat_completions';
+  const baseUrl = bindings.REWRITE_BASE_URL?.trim();
+  const model = bindings.REWRITE_MODEL?.trim();
+
+  if (!apiKey || !baseUrl || !model || apiMode !== 'chat_completions') {
+    throw new RewriteProviderError('PROVIDER_CONFIGURATION_ERROR');
+  }
+
+  return { apiKey, baseUrl, model };
 }
 
 function createProductionBillingRuntime(bindings: ApiBindings): BillingRuntime {
@@ -491,11 +511,11 @@ function createProductionAccountDeletionGateway(bindings: ApiBindings): AccountD
 }
 
 function mapServiceError(
-  error: RewriteError | EbondProviderError | AccountDeletionError | BillingError,
+  error: RewriteError | RewriteProviderError | AccountDeletionError | BillingError,
 ): ApiError {
   const errorDefinitions: Record<
     | RewriteError['code']
-    | EbondProviderError['code']
+    | RewriteProviderError['code']
     | AccountDeletionError['code']
     | BillingError['code'],
     {

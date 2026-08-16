@@ -97,6 +97,7 @@ describe('member authentication pages', () => {
       expect(page).toContain('src="/js/auth.js"');
       expect(page).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
       expect(page).not.toContain('EBOND_API_KEY');
+      expect(page).not.toContain('REWRITE_API_KEY');
       expect(page).not.toContain('GOOGLE_CLIENT_SECRET');
     }
   });

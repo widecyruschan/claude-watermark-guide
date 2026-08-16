@@ -5,9 +5,9 @@ import { BillingError, type BillingRuntime } from '../../src/billing/billingServ
 
 const bindings = {
   APP_BASE_URL: 'https://watermarklens.com',
-  EBOND_API_KEY: 'provider-key-must-not-leak',
-  EBOND_BASE_URL: 'https://api.ebondai.com',
-  EBOND_MODEL: 'gpt-5.5',
+  REWRITE_API_KEY: 'provider-key-must-not-leak',
+  REWRITE_BASE_URL: 'https://breakout.wenwen-ai.com',
+  REWRITE_MODEL: 'gpt-5.5',
   STRIPE_PRO_PRICE_ID: 'price_test_pro_monthly',
   STRIPE_SECRET_KEY: 'stripe-secret-must-not-leak',
   STRIPE_WEBHOOK_SECRET: 'webhook-secret-must-not-leak',

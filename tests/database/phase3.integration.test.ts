@@ -63,7 +63,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
       p_input_sha256: inputSha256,
       p_model: 'gpt-5.5',
       p_prompt_version: 'rewrite-v1.1.0',
-      p_provider: 'ebond',
+      p_provider: 'wenwen',
       p_request_id: requestId,
       p_user_id: userId,
     });
@@ -129,7 +129,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
 
     const complete = () =>
       serviceClient.rpc('complete_rewrite_request', {
-        p_cost_microusd: 600,
+        p_cost_microusd: 500,
         p_input_tokens: 250,
         p_output_tokens: 125,
         p_request_id: requestId,
@@ -159,11 +159,12 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
       .single();
     expect(requestRow.error).toBeNull();
     expect(requestRow.data).toMatchObject({
-      cost_microusd: 600,
+      cost_microusd: 500,
       input_characters: 1_000,
       input_sha256: inputSha256,
       input_tokens: 250,
       output_tokens: 125,
+      provider: 'wenwen',
       status: 'succeeded',
     });
     expect(requestRow.data).not.toHaveProperty('request_text');
@@ -180,7 +181,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
       .single();
     expect(ledger.error).toBeNull();
     expect(ledger.data).toEqual({
-      cost_microusd: 600,
+      cost_microusd: 500,
       entry_type: 'settle',
       input_tokens: 250,
       output_tokens: 125,

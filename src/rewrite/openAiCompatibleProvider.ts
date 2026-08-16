@@ -9,34 +9,6 @@ import { createRewriteSystemPrompt } from './prompt';
 
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 
-const responsesPayloadSchema = z
-  .object({
-    output_text: z.string().optional(),
-    output: z
-      .array(
-        z
-          .object({
-            content: z
-              .array(
-                z
-                  .object({
-                    text: z.string().optional(),
-                    type: z.string(),
-                  })
-                  .passthrough(),
-              )
-              .optional(),
-          })
-          .passthrough(),
-      )
-      .optional(),
-    usage: z.object({
-      input_tokens: z.number().int().nonnegative(),
-      output_tokens: z.number().int().nonnegative(),
-    }),
-  })
-  .passthrough();
-
 const chatCompletionsPayloadSchema = z
   .object({
     choices: z
@@ -59,9 +31,7 @@ const modelsPayloadSchema = z.object({
   data: z.array(z.object({ id: z.string() })),
 });
 
-export type EbondApiMode = 'chat_completions' | 'responses';
-
-export type EbondProviderErrorCode =
+export type RewriteProviderErrorCode =
   | 'PROVIDER_CANCELLED'
   | 'PROVIDER_CONFIGURATION_ERROR'
   | 'PROVIDER_INVALID_RESPONSE'
@@ -70,24 +40,23 @@ export type EbondProviderErrorCode =
   | 'PROVIDER_TIMEOUT'
   | 'PROVIDER_UNAVAILABLE';
 
-export type EbondTransportFailureKind = 'invalid_header' | 'network' | 'other';
+export type RewriteTransportFailureKind = 'invalid_header' | 'network' | 'other';
 
-export class EbondProviderError extends Error {
+export class RewriteProviderError extends Error {
   constructor(
-    readonly code: EbondProviderErrorCode,
+    readonly code: RewriteProviderErrorCode,
     readonly statusCode?: number,
-    readonly transportFailureKind?: EbondTransportFailureKind,
+    readonly transportFailureKind?: RewriteTransportFailureKind,
     readonly diagnosticStatusCode?: number,
     readonly diagnosticModelAvailable?: boolean,
   ) {
     super(code);
-    this.name = 'EbondProviderError';
+    this.name = 'RewriteProviderError';
   }
 }
 
-interface EbondProviderOptions {
+interface OpenAiCompatibleProviderOptions {
   apiKey: string;
-  apiMode?: EbondApiMode;
   baseUrl: string;
   enableConnectivityProbe?: boolean;
   fetch?: typeof fetch;
@@ -96,9 +65,8 @@ interface EbondProviderOptions {
   timeoutMs?: number;
 }
 
-export class EbondProvider {
+export class OpenAiCompatibleProvider {
   private readonly apiKey: string;
-  private readonly apiMode: EbondApiMode;
   private readonly baseUrl: string;
   private readonly enableConnectivityProbe: boolean;
   private readonly fetchImplementation: typeof fetch;
@@ -106,14 +74,13 @@ export class EbondProvider {
   private readonly retryDelayMs: number;
   private readonly timeoutMs: number;
 
-  constructor(options: EbondProviderOptions) {
+  constructor(options: OpenAiCompatibleProviderOptions) {
     this.apiKey = options.apiKey.trim();
 
     if (!/^[\x21-\x7e]+$/u.test(this.apiKey)) {
-      throw new EbondProviderError('PROVIDER_CONFIGURATION_ERROR');
+      throw new RewriteProviderError('PROVIDER_CONFIGURATION_ERROR');
     }
 
-    this.apiMode = options.apiMode ?? 'responses';
     this.baseUrl = options.baseUrl.replace(/\/+$/u, '');
     this.enableConnectivityProbe = options.enableConnectivityProbe ?? false;
     this.fetchImplementation = options.fetch ?? fetch;
@@ -131,9 +98,7 @@ export class EbondProvider {
       const response = await this.requestProviderApi(text, options, cancellationSignal);
 
       if (response.ok) {
-        return this.apiMode === 'responses'
-          ? this.parseResponsesResult(response)
-          : this.parseChatCompletionsResult(response);
+        return this.parseChatCompletionsResult(response);
       }
 
       if (attempt === 0 && RETRYABLE_STATUS_CODES.has(response.status)) {
@@ -142,17 +107,17 @@ export class EbondProvider {
       }
 
       if (response.status === 429) {
-        throw new EbondProviderError('PROVIDER_RATE_LIMITED', response.status);
+        throw new RewriteProviderError('PROVIDER_RATE_LIMITED', response.status);
       }
 
       if (response.status >= 500) {
-        throw new EbondProviderError('PROVIDER_UNAVAILABLE', response.status);
+        throw new RewriteProviderError('PROVIDER_UNAVAILABLE', response.status);
       }
 
-      throw new EbondProviderError('PROVIDER_REJECTED', response.status);
+      throw new RewriteProviderError('PROVIDER_REJECTED', response.status);
     }
 
-    throw new EbondProviderError('PROVIDER_UNAVAILABLE');
+    throw new RewriteProviderError('PROVIDER_UNAVAILABLE');
   }
 
   private async requestProviderApi(
@@ -175,28 +140,17 @@ export class EbondProvider {
     }
 
     try {
-      const request =
-        this.apiMode === 'responses'
-          ? {
-              body: {
-                input: text,
-                instructions: createRewriteSystemPrompt(options),
-                model: this.model,
-                store: false,
-              },
-              path: '/v1/responses',
-            }
-          : {
-              body: {
-                messages: [
-                  { content: createRewriteSystemPrompt(options), role: 'system' },
-                  { content: text, role: 'user' },
-                ],
-                model: this.model,
-                stream: false,
-              },
-              path: '/v1/chat/completions',
-            };
+      const request = {
+        body: {
+          messages: [
+            { content: createRewriteSystemPrompt(options), role: 'system' },
+            { content: text, role: 'user' },
+          ],
+          model: this.model,
+          stream: false,
+        },
+        path: '/v1/chat/completions',
+      };
 
       return await this.fetchImplementation(`${this.baseUrl}${request.path}`, {
         body: JSON.stringify(request.body),
@@ -209,18 +163,18 @@ export class EbondProvider {
       });
     } catch (error) {
       if (cancellationSignal?.aborted) {
-        throw new EbondProviderError('PROVIDER_CANCELLED');
+        throw new RewriteProviderError('PROVIDER_CANCELLED');
       }
 
       if (didTimeout) {
-        throw new EbondProviderError('PROVIDER_TIMEOUT');
+        throw new RewriteProviderError('PROVIDER_TIMEOUT');
       }
 
       const diagnostic = this.enableConnectivityProbe
         ? await this.probeProviderAccess()
         : undefined;
 
-      throw new EbondProviderError(
+      throw new RewriteProviderError(
         'PROVIDER_UNAVAILABLE',
         undefined,
         classifyTransportFailure(error),
@@ -261,42 +215,18 @@ export class EbondProvider {
     }
   }
 
-  private async parseResponsesResult(response: Response): Promise<RewriteProviderResult> {
-    const payload = await response.json().catch(() => null);
-    const parsedPayload = responsesPayloadSchema.safeParse(payload);
-
-    if (!parsedPayload.success) {
-      throw new EbondProviderError('PROVIDER_INVALID_RESPONSE');
-    }
-
-    const nestedText = parsedPayload.data.output
-      ?.flatMap((outputItem) => outputItem.content ?? [])
-      .find((contentItem) => contentItem.type === 'output_text')?.text;
-    const rewrittenText = (parsedPayload.data.output_text ?? nestedText)?.trim();
-
-    if (!rewrittenText) {
-      throw new EbondProviderError('PROVIDER_INVALID_RESPONSE');
-    }
-
-    return {
-      inputTokens: parsedPayload.data.usage.input_tokens,
-      outputTokens: parsedPayload.data.usage.output_tokens,
-      text: rewrittenText,
-    };
-  }
-
   private async parseChatCompletionsResult(response: Response): Promise<RewriteProviderResult> {
     const payload = await response.json().catch(() => null);
     const parsedPayload = chatCompletionsPayloadSchema.safeParse(payload);
 
     if (!parsedPayload.success) {
-      throw new EbondProviderError('PROVIDER_INVALID_RESPONSE');
+      throw new RewriteProviderError('PROVIDER_INVALID_RESPONSE');
     }
 
     const rewrittenText = parsedPayload.data.choices[0]?.message.content.trim();
 
     if (!rewrittenText) {
-      throw new EbondProviderError('PROVIDER_INVALID_RESPONSE');
+      throw new RewriteProviderError('PROVIDER_INVALID_RESPONSE');
     }
 
     return {
@@ -307,7 +237,7 @@ export class EbondProvider {
   }
 }
 
-function classifyTransportFailure(error: unknown): EbondTransportFailureKind {
+function classifyTransportFailure(error: unknown): RewriteTransportFailureKind {
   if (!(error instanceof Error)) {
     return 'other';
   }
@@ -331,7 +261,7 @@ function classifyTransportFailure(error: unknown): EbondTransportFailureKind {
 
 async function waitForRetry(delayMs: number, cancellationSignal?: AbortSignal): Promise<void> {
   if (cancellationSignal?.aborted) {
-    throw new EbondProviderError('PROVIDER_CANCELLED');
+    throw new RewriteProviderError('PROVIDER_CANCELLED');
   }
 
   if (delayMs <= 0) {
@@ -341,7 +271,7 @@ async function waitForRetry(delayMs: number, cancellationSignal?: AbortSignal): 
   await new Promise<void>((resolve, reject) => {
     const cancelRetry = () => {
       clearTimeout(timeout);
-      reject(new EbondProviderError('PROVIDER_CANCELLED'));
+      reject(new RewriteProviderError('PROVIDER_CANCELLED'));
     };
     const finishRetryDelay = () => {
       cancellationSignal?.removeEventListener('abort', cancelRetry);
