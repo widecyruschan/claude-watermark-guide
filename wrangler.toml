@@ -4,7 +4,8 @@ compatibility_date = "2026-08-15"
 pages_build_output_dir = "dist"
 
 [env.production.vars]
-EBOND_BASE_URL = "https://api.ebondai.com"
 EBOND_API_MODE = "chat_completions"
+EBOND_BASE_URL = "https://api.ebondai.com"
 EBOND_MODEL = "gpt-5.5"
 SUPABASE_URL = "https://oyxdensbufzdzgmfuhyd.supabase.co"
+APP_BASE_URL = "https://watermarklens.com"
