@@ -1,7 +1,11 @@
 import { z } from 'zod';
 
-import type { RewriteProviderResult } from './contracts';
-import { REWRITE_SYSTEM_PROMPT } from './prompt';
+import {
+  DEFAULT_REWRITE_OPTIONS,
+  type RewriteOptions,
+  type RewriteProviderResult,
+} from './contracts';
+import { createRewriteSystemPrompt } from './prompt';
 
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 
@@ -118,9 +122,13 @@ export class EbondProvider {
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }
 
-  async rewrite(text: string, cancellationSignal?: AbortSignal): Promise<RewriteProviderResult> {
+  async rewrite(
+    text: string,
+    options: RewriteOptions = DEFAULT_REWRITE_OPTIONS,
+    cancellationSignal?: AbortSignal,
+  ): Promise<RewriteProviderResult> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const response = await this.requestProviderApi(text, cancellationSignal);
+      const response = await this.requestProviderApi(text, options, cancellationSignal);
 
       if (response.ok) {
         return this.apiMode === 'responses'
@@ -149,6 +157,7 @@ export class EbondProvider {
 
   private async requestProviderApi(
     text: string,
+    options: RewriteOptions,
     cancellationSignal?: AbortSignal,
   ): Promise<Response> {
     const requestController = new AbortController();
@@ -171,7 +180,7 @@ export class EbondProvider {
           ? {
               body: {
                 input: text,
-                instructions: REWRITE_SYSTEM_PROMPT,
+                instructions: createRewriteSystemPrompt(options),
                 model: this.model,
                 store: false,
               },
@@ -180,7 +189,7 @@ export class EbondProvider {
           : {
               body: {
                 messages: [
-                  { content: REWRITE_SYSTEM_PROMPT, role: 'system' },
+                  { content: createRewriteSystemPrompt(options), role: 'system' },
                   { content: text, role: 'user' },
                 ],
                 model: this.model,

@@ -10,8 +10,16 @@ import {
   type RewriteInput,
 } from '../rewrite/contracts';
 import { EbondProvider, EbondProviderError } from '../rewrite/ebondProvider';
-import { executeRewrite, RewriteError, type RewriteRuntime } from '../rewrite/rewriteService';
-import { SupabaseRewriteGateway } from '../rewrite/supabaseRewriteGateway';
+import {
+  AccountDeletionError,
+  executeRewrite,
+  RewriteError,
+  type RewriteRuntime,
+} from '../rewrite/rewriteService';
+import {
+  SupabaseRewriteGateway,
+  type AccountDeletionGateway,
+} from '../rewrite/supabaseRewriteGateway';
 
 export interface ApiBindings {
   EBOND_API_KEY: string;
@@ -38,6 +46,7 @@ export interface ApiEnvironment {
 
 export const API_ERROR_CODE = {
   accountNotInitialized: 'ACCOUNT_NOT_INITIALIZED',
+  accountDeleteUnavailable: 'ACCOUNT_DELETE_UNAVAILABLE',
   accountSuspended: 'ACCOUNT_SUSPENDED',
   authConfigurationError: 'AUTH_CONFIGURATION_ERROR',
   authenticationRequired: 'AUTHENTICATION_REQUIRED',
@@ -58,6 +67,7 @@ export const API_ERROR_CODE = {
   providerTimeout: 'PROVIDER_TIMEOUT',
   providerUnavailable: 'PROVIDER_UNAVAILABLE',
   quotaExceeded: 'QUOTA_EXCEEDED',
+  recentAuthenticationRequired: 'RECENT_AUTHENTICATION_REQUIRED',
   requestLimitExceeded: 'REQUEST_LIMIT_EXCEEDED',
   validationFailed: 'VALIDATION_FAILED',
 } as const;
@@ -196,11 +206,14 @@ export function validateJsonBody(schema: ZodType) {
 }
 
 interface CreateApiAppOptions {
+  accountDeletionGatewayFactory?: (bindings: ApiBindings) => AccountDeletionGateway;
   rewriteRuntimeFactory?: (bindings: ApiBindings) => RewriteRuntime;
 }
 
 export function createApiApp(options: CreateApiAppOptions = {}) {
   const app = new Hono<ApiEnvironment>();
+  const accountDeletionGatewayFactory =
+    options.accountDeletionGatewayFactory ?? createProductionAccountDeletionGateway;
   const rewriteRuntimeFactory = options.rewriteRuntimeFactory ?? createProductionRewriteRuntime;
 
   app.use('*', requestIdMiddleware);
@@ -268,6 +281,7 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       const result = await executeRewrite(context.get('rewriteRuntime'), {
         cancellationSignal: context.req.raw.signal,
         model: context.env.EBOND_MODEL,
+        options: body.options,
         requestId: idempotencyKey.data,
         text: body.text,
         userId: context.get('authenticatedUserId'),
@@ -282,6 +296,14 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       });
     },
   );
+  app.post('/api/v1/account/delete', async (context) => {
+    await accountDeletionGatewayFactory(context.env).deleteRecentlyAuthenticatedUser(
+      context.req.header('authorization'),
+      context.get('requestId'),
+    );
+
+    return successResponse(context, 'The account was deleted.', null);
+  });
   app.notFound((context) =>
     errorResponse(
       context,
@@ -298,7 +320,11 @@ export function createApiApp(options: CreateApiAppOptions = {}) {
       return errorResponse(context, error);
     }
 
-    if (error instanceof RewriteError || error instanceof EbondProviderError) {
+    if (
+      error instanceof RewriteError ||
+      error instanceof EbondProviderError ||
+      error instanceof AccountDeletionError
+    ) {
       return errorResponse(context, mapRewriteError(error));
     }
 
@@ -336,9 +362,15 @@ function createProductionRewriteRuntime(bindings: ApiBindings): RewriteRuntime {
   };
 }
 
-function mapRewriteError(error: RewriteError | EbondProviderError): ApiError {
+function createProductionAccountDeletionGateway(bindings: ApiBindings): AccountDeletionGateway {
+  return new SupabaseRewriteGateway(bindings.SUPABASE_URL, bindings.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function mapRewriteError(
+  error: RewriteError | EbondProviderError | AccountDeletionError,
+): ApiError {
   const errorDefinitions: Record<
-    RewriteError['code'] | EbondProviderError['code'],
+    RewriteError['code'] | EbondProviderError['code'] | AccountDeletionError['code'],
     {
       details: string;
       message: string;
@@ -349,6 +381,11 @@ function mapRewriteError(error: RewriteError | EbondProviderError): ApiError {
       details: 'Sign in again before retrying the request.',
       message: 'The member account is not ready.',
       status: 409,
+    },
+    ACCOUNT_DELETE_UNAVAILABLE: {
+      details: 'Try again later or contact support if the problem continues.',
+      message: 'The account could not be deleted right now.',
+      status: 503,
     },
     ACCOUNT_SUSPENDED: {
       details: 'Contact support if you believe this is an error.',
@@ -424,6 +461,11 @@ function mapRewriteError(error: RewriteError | EbondProviderError): ApiError {
       details: 'Wait for the next usage period or change plans.',
       message: 'The account quota has been reached.',
       status: 429,
+    },
+    RECENT_AUTHENTICATION_REQUIRED: {
+      details: 'Sign in again, then return here to confirm account deletion.',
+      message: 'Recent sign-in is required to delete this account.',
+      status: 409,
     },
     REQUEST_LIMIT_EXCEEDED: {
       details: 'Reduce the submitted text and try again.',

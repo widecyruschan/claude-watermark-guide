@@ -76,10 +76,17 @@ Hosted development 及 production 專案不會讀取本機 `.env.local`。必須
 網站使用 Supabase JS PKCE 流程：
 
 1. `/login` 從 `GET /api/v1/auth/config` 取得 Supabase URL 及 publishable key。
-2. 用戶按 Google 登入後，Supabase 把 PKCE verifier 保存在瀏覽器 storage，並跳轉 Google。
-3. Google 驗證完成後返回 `/auth/callback`；頁面以 `exchangeCodeForSession` 建立 Supabase session。
-4. 成功後清除 callback URL 參數並跳轉 `/account`。
+2. 用戶可輸入電郵取得 Magic Link，或按 Google 登入。兩者都只可跳轉到 allowlist 內的 `/auth/callback`。
+3. Google 使用 PKCE verifier；Magic Link 由 Supabase Auth 驗證。callback 頁可處理 PKCE code、URL session 或已完成 callback 的既有 session。
+4. 成功後清除 callback URL 參數，預設跳轉 `/account`；從 `/rewrite` 發起登入時只容許返回 `/rewrite`。
 5. `/account` 恢復及自動 refresh session，顯示 Profile、有效方案、帳單狀態、目前週期及剩餘字符；`SIGNED_OUT` 或 refresh 後無 session 會返回 `/login`。
+
+### Phase 4 會員介面及帳戶刪除
+
+- `/rewrite` 為已登入會員的 AI 重寫工作區。訪客可輸入及保留本機草稿，但不能提交；Checker 仍完全免登入且不發出網絡請求。
+- 重寫草稿只存入當前分頁的 `sessionStorage`，不會寫入 Supabase、Cloudflare log、Plausible 或 EBond 以外的服務。session 過期、取消、網絡錯誤或配額錯誤時，草稿會保留。
+- `/api/v1/account/delete` 只接受會員 JWT。服務端會以 Supabase Auth `last_sign_in_at` 驗證最近 10 分鐘內的登入，然後呼叫 `anonymize_deleted_member` 清除 Profile 顯示名稱、停用產品存取並新增 `account.delete` audit；最後對 Auth 使用者執行 soft delete。
+- `20260816093000_phase4_account_deletion.sql` 必須先在 development push 和驗證，再推送 production；不得讓瀏覽器直接呼叫資料庫函數或看到 service-role key。
 
 Pages Functions 需要以下 binding：
 
@@ -115,6 +122,8 @@ unset db_password
 ```
 
 Development 驗證通過後，才以相同流程將 migration 推到 Production。Production 不可使用 `--include-seed`。
+
+Phase 4 migration 推送後，檢查 hosted migration list 包含 `20260816093000`，並以新建立的測試會員驗證：最近登入可刪除、過期登入會返回 `RECENT_AUTHENTICATION_REQUIRED`、刪除後不能建立新 session。不要以正式帳戶進行刪除測試。
 
 ## 建立首位管理員
 

@@ -399,4 +399,45 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 2 Supabase behavior', () => {
       },
     ]);
   });
+
+  it('permits only service role to anonymize a member before Auth soft deletion', async () => {
+    const member = await createVerifiedUser('account-delete');
+    const requestId = crypto.randomUUID();
+
+    const browserAttempt = await member.browserClient.rpc('anonymize_deleted_member', {
+      p_request_id: requestId,
+      p_user_id: member.user.id,
+    });
+    expect(browserAttempt.error?.code).toBe('42501');
+
+    const serviceAttempt = await serviceClient.rpc('anonymize_deleted_member', {
+      p_request_id: requestId,
+      p_user_id: member.user.id,
+    });
+    expect(serviceAttempt.error).toBeNull();
+
+    const profile = await serviceClient
+      .from('profiles')
+      .select('display_name, role, status')
+      .eq('id', member.user.id)
+      .single();
+    expect(profile.error).toBeNull();
+    expect(profile.data).toEqual({
+      display_name: null,
+      role: 'member',
+      status: 'suspended',
+    });
+
+    const auditEntry = await serviceClient
+      .from('admin_audit_logs')
+      .select('action, reason, target_user_id')
+      .eq('request_id', requestId)
+      .single();
+    expect(auditEntry.error).toBeNull();
+    expect(auditEntry.data).toEqual({
+      action: 'account.delete',
+      reason: 'self-service account deletion',
+      target_user_id: member.user.id,
+    });
+  });
 });

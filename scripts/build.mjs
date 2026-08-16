@@ -30,3 +30,15 @@ await build({
   sourcemap: false,
   target: ['es2022'],
 });
+
+await build({
+  bundle: true,
+  entryPoints: [resolve(projectRoot, 'src', 'client', 'rewrite.ts')],
+  format: 'iife',
+  legalComments: 'none',
+  minify: true,
+  outfile: resolve(outputDirectory, 'js', 'rewrite.js'),
+  platform: 'browser',
+  sourcemap: false,
+  target: ['es2022'],
+});

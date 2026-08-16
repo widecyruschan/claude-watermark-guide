@@ -89,8 +89,10 @@ try {
   await verifyResponse('/checker', 'Claude Watermark Self-Check');
   await verifyResponse('/login', 'Sign in to Watermark Lens');
   await verifyResponse('/account', 'Your account');
+  await verifyResponse('/rewrite', 'AI Text Rewriter');
   await verifyResponse('/auth/callback', 'Completing sign-in');
   await verifyResponse('/js/auth.js', 'exchangeCodeForSession');
+  await verifyResponse('/js/rewrite.js', 'idempotency-key');
 
   const healthResponse = await fetch(`${baseUrl}/api/v1/health`);
   const healthBody = await healthResponse.json();

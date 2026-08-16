@@ -259,3 +259,28 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：Supabase Auth JS、Google OAuth 2.0、PKCE、TypeScript、esbuild、Cloudflare Pages Functions、Vitest。
 - 新增或修改檔案：新增登入、callback、會員頁、`src/client/auth.ts` 及五組 Auth 測試；更新 API、build、smoke、樣式、首頁、Supabase 運維手冊、package 工具鏈及本 README；本機 `.dev.vars` 保持 Git ignored，未提交任何 Secret。
 - 後續建議：部署後完成真實 Google 登入、callback、Profile、refresh 及 logout 驗證；development Google Provider、Magic Link、刪除帳戶及完整會員選單仍屬後續 Phase 4 工作。
+
+### 2026-08-16：Production 實質登出驗證
+- 會話主要目的：以已登入的 production 瀏覽器工作階段，驗證實質登出及受保護帳戶頁的存取控制。
+- 完成的主要任務：觸發帳戶頁登出；確認導向 `/login`、Google 登入按鈕可用；再直接存取 `/account`，確認未有 session 時會自動導回 `/login`。
+- 關鍵決策和解決方案：驗證只檢查路由與可見登入狀態，不讀取或輸出瀏覽器 Cookie、storage、Google 電郵、授權碼或 session token；最終 URL 不含 OAuth code 或 access／refresh token。
+- 使用的技術棧：Supabase Auth、Google OAuth、Cloudflare Pages、production 瀏覽器端到端驗證。
+- 新增或修改檔案：只追加本 README 測試記錄；未修改應用程式程式碼、Supabase 設定、Cloudflare Secret、`.env` 或其他憑據。
+- 後續建議：如要在本機或 preview 環境重現登入流程，先啟用 development Supabase 的 Google Provider；Magic Link、帳戶刪除與完整計費 Portal 仍屬後續工作。
+
+### 2026-08-16：完成 Phase 4 會員介面
+- 會話主要目的：為會員建立 Magic Link／Google 登入、AI 重寫工作區、帳戶用量與帳戶刪除的完整前端流程。
+- 完成的主要任務：新增 `/rewrite` 頁面與語氣、正式程度、重寫強度控制；支援取消、錯誤、結果、複製及下載；加入 Magic Link、帳戶 menu、session 過期草稿保留、用量進度及響應式版面；加入需最近登入的帳戶刪除 API、匿名化與 Auth soft delete。
+- 關鍵決策和解決方案：重寫草稿只留在當前瀏覽器分頁的 `sessionStorage`，不落資料庫；控制選項同時經 API allowlist 驗證並納入版本化 Prompt 和冪等雜湊；本機 Checker 保持免登入、零上傳，並明確與 AI 重寫分開；無 Stripe Checkout 前只顯示升級提示，不提供失效付款操作。
+- 使用的技術棧：原生 HTML/CSS、TypeScript、Supabase Auth、Cloudflare Pages Functions、EBond API、Postgres/RLS、Vitest、Wrangler 本機 smoke 及瀏覽器響應式驗證。
+- 新增或修改檔案：新增重寫頁、瀏覽器端重寫流程、帳戶刪除 migration 和 API 測試；更新認證、重寫契約/Prompt、樣式、首頁、Checker、建置和 smoke 測試；未建立或提交 `.env`、Cloudflare Secret、Supabase service-role key、Google Secret 或 EBond Key。
+- 後續建議：部署前先對 production 套用 `20260816093000_phase4_account_deletion.sql`；啟用 production Magic Link 模板並用實際測試帳戶驗證；Stripe Checkout、Portal 及真正 Pro 付款升級仍屬 Phase 5。
+
+### 2026-08-16：Phase 4 最終驗收
+- 會話主要目的：完成 Phase 4 會員介面、資料庫 migration 及 API 的最終建置前驗收。
+- 完成的主要任務：重新驗證 session refresh、過期後草稿保留、最近驗證刪除帳戶流程、登入／帳戶路由與響應式會員頁；確認受版本控制檔案不含 `.env`、`.dev.vars` 或實際憑據。
+- 關鍵決策和解決方案：production 必須先套用 `20260816093000_phase4_account_deletion.sql`，再部署含帳戶刪除端點的版本，避免前端先公開而資料庫函數尚未存在。
+- 使用的技術棧：TypeScript、Supabase Auth/Postgres、Cloudflare Pages Functions、Vitest、Playwright、Supabase CLI。
+- 新增或修改檔案：追加本 README 驗收記錄；未建立、讀取、修改或提交任何 Secret、`.env` 或本機憑據檔。
+- 驗證結果：`npm run check`（51 passed、8 skipped）、`npm run test:e2e`（4 passed）、`npm run test:database`（8 passed）、`npx supabase db lint --local --level warning` 及 `git diff --check` 均通過。
+- 後續建議：在 development 及 production 套用 migration 後，以新建測試會員完成 Magic Link、Google、Free／Pro 權益、session 過期及刪除帳戶的實際遠端驗證；不可使用正式帳戶測試刪除。

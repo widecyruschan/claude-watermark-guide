@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { EbondProvider, EbondProviderError } from '../../src/rewrite/ebondProvider';
-import { REWRITE_PROMPT_VERSION, REWRITE_SYSTEM_PROMPT } from '../../src/rewrite/prompt';
+import {
+  createRewriteSystemPrompt,
+  REWRITE_PROMPT_VERSION,
+  REWRITE_SYSTEM_PROMPT,
+} from '../../src/rewrite/prompt';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -49,7 +53,7 @@ describe('EBond Responses provider', () => {
       model: 'gpt-5.5',
       store: false,
     });
-    expect(REWRITE_PROMPT_VERSION).toBe('rewrite-v1.0.0');
+    expect(REWRITE_PROMPT_VERSION).toBe('rewrite-v1.1.0');
   });
 
   it('accepts a top-level output_text compatibility field', async () => {
@@ -107,6 +111,36 @@ describe('EBond Responses provider', () => {
       model: 'gpt-5.5',
       stream: false,
     });
+  });
+
+  it('puts selected rewrite controls into the provider instructions without a language override', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        output_text: 'A concise professional result.',
+        usage: { input_tokens: 12, output_tokens: 4 },
+      }),
+    );
+    const provider = new EbondProvider({
+      apiKey: 'provider-secret',
+      baseUrl: 'https://api.ebondai.com',
+      fetch: fetchMock,
+      model: 'gpt-5.5',
+      retryDelayMs: 0,
+      timeoutMs: 1_000,
+    });
+    const options = {
+      formality: 'high' as const,
+      strength: 'low' as const,
+      tone: 'concise' as const,
+    };
+
+    await provider.rewrite('Original text.', options);
+
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      instructions: createRewriteSystemPrompt(options),
+    });
+    expect(JSON.parse(String(request?.body))).not.toHaveProperty('language');
   });
 
   it('retries one explicitly retryable HTTP failure', async () => {
@@ -232,7 +266,7 @@ describe('EBond Responses provider', () => {
       timeoutMs: 1_000,
     });
     const controller = new AbortController();
-    const result = provider.rewrite('Original.', controller.signal);
+    const result = provider.rewrite('Original.', undefined, controller.signal);
     controller.abort();
 
     await expect(result).rejects.toMatchObject({ code: 'PROVIDER_CANCELLED' });

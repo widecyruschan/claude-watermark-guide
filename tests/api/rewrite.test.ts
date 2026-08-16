@@ -81,13 +81,14 @@ describe('POST /api/v1/rewrite', () => {
     );
     expect(runtime.provider.rewrite).toHaveBeenCalledWith(
       'Original text.',
+      { formality: 'medium', strength: 'medium', tone: 'neutral' },
       expect.any(AbortSignal),
     );
     expect(runtime.repository.beginRewriteRequest).toHaveBeenCalledWith({
       inputCharacters: 14,
       inputSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
       model: 'gpt-5.5',
-      promptVersion: 'rewrite-v1.0.0',
+      promptVersion: 'rewrite-v1.1.0',
       provider: 'ebond',
       requestId: idempotencyKey,
       userId,

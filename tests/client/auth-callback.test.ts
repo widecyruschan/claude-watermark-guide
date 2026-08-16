@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { completeOAuthCallback } from '../../src/client/auth';
+import {
+  completeOAuthCallback,
+  resolvePostSignInPath,
+  shouldStartReauthentication,
+} from '../../src/client/auth';
 
 describe('OAuth callback completion', () => {
   it('exchanges an authorization code for a Supabase session', async () => {
@@ -33,7 +37,7 @@ describe('OAuth callback completion', () => {
     expect(getSession).not.toHaveBeenCalled();
     expect(result).toEqual({
       ok: false,
-      message: 'Google sign-in was not completed. Please try again.',
+      message: 'Sign-in was not completed. Please try again.',
     });
   });
 
@@ -55,5 +59,27 @@ describe('OAuth callback completion', () => {
     expect(exchangeCodeForSession).toHaveBeenCalledWith('already-exchanged-code');
     expect(getSession).toHaveBeenCalledOnce();
     expect(result).toEqual({ ok: true });
+  });
+});
+
+describe('post sign-in navigation', () => {
+  it('returns only to supported member pages', () => {
+    expect(
+      resolvePostSignInPath(new URL('https://watermarklens.com/auth/callback?next=/rewrite')),
+    ).toBe('/rewrite');
+    expect(
+      resolvePostSignInPath(
+        new URL('https://watermarklens.com/auth/callback?next=https://example.com'),
+      ),
+    ).toBe('/account');
+  });
+
+  it('allows an explicit local sign-out only for the account-deletion reauthentication flow', () => {
+    expect(shouldStartReauthentication(new URL('https://watermarklens.com/login?reauth=1'))).toBe(
+      true,
+    );
+    expect(shouldStartReauthentication(new URL('https://watermarklens.com/login?reauth=0'))).toBe(
+      false,
+    );
   });
 });

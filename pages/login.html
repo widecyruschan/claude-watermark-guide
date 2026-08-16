@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign in | Watermark Lens</title>
-  <meta name="description" content="Sign in to Watermark Lens with Google to access AI text rewriting and your member account." />
+  <meta name="description" content="Sign in to Watermark Lens with a Magic Link or Google to access AI text rewriting and your member account." />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="canonical" href="https://watermarklens.com/login" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -27,7 +27,15 @@
     <section class="auth-panel" aria-labelledby="signInTitle">
       <p class="auth-kicker">Member access</p>
       <h1 id="signInTitle">Sign in to Watermark Lens</h1>
-      <p class="auth-intro">Use your Google account to access AI rewriting, plan details, and usage.</p>
+      <p class="auth-intro">Use a secure email link or Google to access AI rewriting, plan details, and usage.</p>
+      <form id="magicLinkForm" class="auth-form">
+        <label for="magicLinkEmail">Email address</label>
+        <input id="magicLinkEmail" name="email" type="email" autocomplete="email" required />
+        <button id="magicLinkButton" class="btn auth-command" type="submit" disabled>
+          Email me a Magic Link
+        </button>
+      </form>
+      <p class="auth-divider" aria-hidden="true">or</p>
       <button id="googleSignInButton" class="btn auth-command" type="button" disabled>
         Continue with Google
       </button>

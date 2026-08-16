@@ -1,5 +1,5 @@
 import { calculateEbondAiCostMicrousd } from './cost';
-import type { RewriteProviderResult } from './contracts';
+import type { RewriteOptions, RewriteProviderResult } from './contracts';
 import { EbondProviderError, type EbondProviderErrorCode } from './ebondProvider';
 import { REWRITE_PROMPT_VERSION } from './prompt';
 
@@ -15,10 +15,20 @@ export type RewriteErrorCode =
   | 'QUOTA_EXCEEDED'
   | 'REQUEST_LIMIT_EXCEEDED';
 
+export type AccountDeletionErrorCode =
+  'ACCOUNT_DELETE_UNAVAILABLE' | 'RECENT_AUTHENTICATION_REQUIRED';
+
 export class RewriteError extends Error {
   constructor(readonly code: RewriteErrorCode) {
     super(code);
     this.name = 'RewriteError';
+  }
+}
+
+export class AccountDeletionError extends Error {
+  constructor(readonly code: AccountDeletionErrorCode) {
+    super(code);
+    this.name = 'AccountDeletionError';
   }
 }
 
@@ -64,7 +74,11 @@ export interface RewriteRepository {
 }
 
 export interface RewriteProvider {
-  rewrite(text: string, cancellationSignal?: AbortSignal): Promise<RewriteProviderResult>;
+  rewrite(
+    text: string,
+    options: RewriteOptions,
+    cancellationSignal?: AbortSignal,
+  ): Promise<RewriteProviderResult>;
 }
 
 export interface RewriteRuntime {
@@ -76,6 +90,7 @@ export interface RewriteRuntime {
 interface ExecuteRewriteInput {
   cancellationSignal?: AbortSignal;
   model: string;
+  options: RewriteOptions;
   requestId: string;
   text: string;
   userId: string;
@@ -93,7 +108,9 @@ export async function executeRewrite(
 ): Promise<ExecuteRewriteResult> {
   const startedAt = Date.now();
   const inputCharacters = [...input.text].length;
-  const inputSha256 = await createSha256(input.text);
+  const inputSha256 = await createSha256(
+    JSON.stringify({ options: input.options, text: input.text }),
+  );
   const claim = await runtime.repository.beginRewriteRequest({
     inputCharacters,
     inputSha256,
@@ -117,7 +134,11 @@ export async function executeRewrite(
   let providerResult: RewriteProviderResult;
 
   try {
-    providerResult = await runtime.provider.rewrite(input.text, input.cancellationSignal);
+    providerResult = await runtime.provider.rewrite(
+      input.text,
+      input.options,
+      input.cancellationSignal,
+    );
   } catch (error) {
     const providerError =
       error instanceof EbondProviderError ? error : new EbondProviderError('PROVIDER_UNAVAILABLE');

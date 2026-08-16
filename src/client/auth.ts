@@ -20,7 +20,7 @@ export type OAuthCallbackResult =
       ok: false;
     };
 
-interface PublicAuthConfig {
+export interface PublicAuthConfig {
   supabasePublishableKey: string;
   supabaseUrl: string;
 }
@@ -69,7 +69,7 @@ export async function completeOAuthCallback(
   if (callbackUrl.searchParams.has('error')) {
     return {
       ok: false,
-      message: 'Google sign-in was not completed. Please try again.',
+      message: 'Sign-in was not completed. Please try again.',
     };
   }
 
@@ -95,7 +95,7 @@ export async function completeOAuthCallback(
   };
 }
 
-async function loadPublicAuthConfig(): Promise<PublicAuthConfig> {
+export async function loadPublicAuthConfig(): Promise<PublicAuthConfig> {
   const response = await fetch('/api/v1/auth/config', {
     cache: 'no-store',
     credentials: 'omit',
@@ -119,15 +119,32 @@ async function loadPublicAuthConfig(): Promise<PublicAuthConfig> {
   return { supabasePublishableKey, supabaseUrl };
 }
 
-function createBrowserClient(config: PublicAuthConfig): SupabaseClient {
+export function createBrowserClient(
+  config: PublicAuthConfig,
+  detectSessionInUrl = false,
+): SupabaseClient {
   return createClient(config.supabaseUrl, config.supabasePublishableKey, {
     auth: {
       autoRefreshToken: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl,
       flowType: 'pkce',
       persistSession: true,
     },
   });
+}
+
+export function resolvePostSignInPath(callbackUrl: URL): string {
+  const next = callbackUrl.searchParams.get('next');
+
+  if (next === '/rewrite' || next === '/account') {
+    return next;
+  }
+
+  return '/account';
+}
+
+export function shouldStartReauthentication(url: URL): boolean {
+  return url.searchParams.get('reauth') === '1';
 }
 
 type ElementConstructor<T extends HTMLElement> = new () => T;
@@ -149,22 +166,71 @@ function setStatus(message: string, isError = false): void {
 }
 
 async function initializeLoginPage(client: SupabaseClient): Promise<void> {
+  const loginUrl = new URL(window.location.href);
   const {
     data: { session },
   } = await client.auth.getSession();
 
-  if (session) {
-    window.location.replace('/account');
+  if (session && !shouldStartReauthentication(loginUrl)) {
+    window.location.replace(resolvePostSignInPath(loginUrl));
     return;
   }
 
+  if (session) {
+    const { error } = await client.auth.signOut({ scope: 'local' });
+    if (error) {
+      setStatus('Authentication is temporarily unavailable. Please try again later.', true);
+      return;
+    }
+  }
+
   const googleButton = getElement('googleSignInButton', HTMLButtonElement);
+  const magicLinkForm = getElement('magicLinkForm', HTMLFormElement);
+  const magicLinkEmail = getElement('magicLinkEmail', HTMLInputElement);
+  const magicLinkButton = getElement('magicLinkButton', HTMLButtonElement);
   googleButton.disabled = false;
-  setStatus('Ready to sign in.');
+  magicLinkButton.disabled = false;
+  setStatus(
+    shouldStartReauthentication(loginUrl)
+      ? 'Sign in again to verify account deletion.'
+      : 'Ready to sign in.',
+  );
 
   googleButton.addEventListener('click', () => {
     void startGoogleSignIn(client, googleButton);
   });
+  magicLinkForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void sendMagicLink(client, magicLinkEmail, magicLinkButton);
+  });
+}
+
+async function sendMagicLink(
+  client: SupabaseClient,
+  emailInput: HTMLInputElement,
+  magicLinkButton: HTMLButtonElement,
+): Promise<void> {
+  if (!emailInput.reportValidity()) {
+    return;
+  }
+
+  magicLinkButton.disabled = true;
+  setStatus('Sending your secure sign-in link…');
+  const { error } = await client.auth.signInWithOtp({
+    email: emailInput.value.trim(),
+    options: {
+      emailRedirectTo: getAuthCallbackUrl(),
+      shouldCreateUser: true,
+    },
+  });
+
+  if (error) {
+    magicLinkButton.disabled = false;
+    setStatus('We could not send the link. Check the email address and try again.', true);
+    return;
+  }
+
+  setStatus('Check your email for a sign-in link. This page can stay open.');
 }
 
 async function startGoogleSignIn(
@@ -177,7 +243,7 @@ async function startGoogleSignIn(
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: getAuthCallbackUrl(),
     },
   });
 
@@ -188,7 +254,8 @@ async function startGoogleSignIn(
 }
 
 async function initializeCallbackPage(client: SupabaseClient): Promise<void> {
-  const result = await completeOAuthCallback(client.auth, new URL(window.location.href));
+  const callbackUrl = new URL(window.location.href);
+  const result = await completeOAuthCallback(client.auth, callbackUrl);
 
   if (!result.ok) {
     setStatus(result.message, true);
@@ -198,7 +265,18 @@ async function initializeCallbackPage(client: SupabaseClient): Promise<void> {
 
   history.replaceState({}, '', '/auth/callback');
   setStatus('Sign-in complete. Opening your account…');
-  window.location.replace('/account');
+  window.location.replace(resolvePostSignInPath(callbackUrl));
+}
+
+function getAuthCallbackUrl(): string {
+  const next = new URL(window.location.href).searchParams.get('next');
+  const callbackUrl = new URL('/auth/callback', window.location.origin);
+
+  if (next === '/rewrite' || next === '/account') {
+    callbackUrl.searchParams.set('next', next);
+  }
+
+  return callbackUrl.toString();
 }
 
 async function initializeAccountPage(client: SupabaseClient): Promise<void> {
@@ -223,10 +301,32 @@ async function initializeAccountPage(client: SupabaseClient): Promise<void> {
 
   await renderAccount(client, session);
 
+  const accountMenu = getElement('accountMenu', HTMLDetailsElement);
+  accountMenu.hidden = false;
+  getElement('menuSignOutButton', HTMLButtonElement).addEventListener('click', () => {
+    void signOut(client, getElement('signOutButton', HTMLButtonElement));
+  });
+
   const signOutButton = getElement('signOutButton', HTMLButtonElement);
   signOutButton.disabled = false;
   signOutButton.addEventListener('click', () => {
     void signOut(client, signOutButton);
+  });
+
+  const deleteButton = getElement('startDeleteAccountButton', HTMLButtonElement);
+  deleteButton.disabled = false;
+  const confirmation = getElement('deleteAccountConfirmation', HTMLDivElement);
+  getElement('cancelDeleteAccountButton', HTMLButtonElement).addEventListener('click', () => {
+    confirmation.hidden = true;
+    getElement('reauthenticationNotice', HTMLParagraphElement).hidden = true;
+    getElement('reauthenticateLink', HTMLAnchorElement).hidden = true;
+  });
+  deleteButton.addEventListener('click', () => {
+    confirmation.hidden = false;
+    getElement('confirmDeleteAccountButton', HTMLButtonElement).focus();
+  });
+  getElement('confirmDeleteAccountButton', HTMLButtonElement).addEventListener('click', () => {
+    void deleteAccount(client);
   });
 }
 
@@ -294,7 +394,11 @@ async function renderAccount(client: SupabaseClient, session: Session): Promise<
   getElement('accountBillingStatus', HTMLElement).textContent = billingStatus;
   getElement('accountPeriod', HTMLElement).textContent = periodLabel;
   getElement('accountUsage', HTMLElement).textContent = usageLabel;
+  const usageProgress = getElement('accountUsageProgress', HTMLProgressElement);
+  usageProgress.value = allowance > 0 ? Math.min(1, (consumed + reserved) / allowance) : 0;
+  usageProgress.setAttribute('aria-label', `${usageLabel}`);
   getElement('accountDetails', HTMLDListElement).hidden = false;
+  getElement('accountUpgradeNotice', HTMLElement).hidden = effectivePlan === 'pro';
   setStatus(
     profileResult.error || subscriptionResult.error || usageResult?.error
       ? 'Signed in. Some membership details are temporarily unavailable.'
@@ -331,6 +435,41 @@ async function signOut(client: SupabaseClient, signOutButton: HTMLButtonElement)
   window.location.replace('/login');
 }
 
+async function deleteAccount(client: SupabaseClient): Promise<void> {
+  const deleteButton = getElement('confirmDeleteAccountButton', HTMLButtonElement);
+  deleteButton.disabled = true;
+  setStatus('Deleting your account…');
+
+  const {
+    data: { session },
+  } = await client.auth.getSession();
+
+  if (!session) {
+    window.location.replace('/login');
+    return;
+  }
+
+  const response = await fetch('/api/v1/account/delete', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${session.access_token}` },
+  });
+
+  if (!response.ok) {
+    deleteButton.disabled = false;
+    if (response.status === 409) {
+      setStatus('Please sign in again before deleting your account.', true);
+      getElement('reauthenticationNotice', HTMLParagraphElement).hidden = false;
+      getElement('reauthenticateLink', HTMLAnchorElement).hidden = false;
+    } else {
+      setStatus('Account deletion is temporarily unavailable. Please try again later.', true);
+    }
+    return;
+  }
+
+  await client.auth.signOut({ scope: 'local' });
+  window.location.replace('/');
+}
+
 async function initializeAuthPage(): Promise<void> {
   const page = document.body.dataset.authPage;
 
@@ -340,7 +479,7 @@ async function initializeAuthPage(): Promise<void> {
 
   try {
     const config = await loadPublicAuthConfig();
-    const client = createBrowserClient(config);
+    const client = createBrowserClient(config, page === 'callback');
 
     if (page === 'login') {
       await initializeLoginPage(client);

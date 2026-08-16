@@ -62,7 +62,7 @@ describe.skipIf(!hasDatabaseEnvironment)('Phase 3 rewrite database behavior', ()
       p_input_characters: 1_000,
       p_input_sha256: inputSha256,
       p_model: 'gpt-5.5',
-      p_prompt_version: 'rewrite-v1.0.0',
+      p_prompt_version: 'rewrite-v1.1.0',
       p_provider: 'ebond',
       p_request_id: requestId,
       p_user_id: userId,

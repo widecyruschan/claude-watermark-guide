@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Text Rewriter | Watermark Lens</title>
+    <meta
+      name="description"
+      content="Rewrite submitted text with adjustable tone, formality, and rewrite strength."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="canonical" href="https://watermarklens.com/rewrite" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap"
+      rel="stylesheet"
+    />
+    <script defer src="/js/rewrite.js"></script>
+  </head>
+  <body data-rewrite-page>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">Watermark Lens</a>
+        <nav class="nav">
+          <a href="/">Home</a>
+          <a href="/checker">Free Checker</a>
+          <a href="/account">Account</a>
+          <details id="accountMenu" class="account-menu" hidden>
+            <summary>Account</summary>
+            <div class="account-menu-panel">
+              <a href="/account">Member account</a>
+              <button id="menuSignOutButton" type="button">Sign out</button>
+            </div>
+          </details>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container rewrite-layout">
+      <section class="rewrite-header" aria-labelledby="rewriteTitle">
+        <p class="auth-kicker">Member tool</p>
+        <h1 id="rewriteTitle">AI Text Rewriter</h1>
+        <p>Preserves the language of your input. No manual language setting is needed.</p>
+      </section>
+
+      <section id="rewriteAuthNotice" class="rewrite-notice" aria-live="polite" hidden>
+        <p id="rewriteAuthNoticeText"></p>
+        <a id="rewriteSignInLink" class="btn" href="/login?next=/rewrite">Sign in to rewrite</a>
+      </section>
+
+      <form id="rewriteForm" class="rewrite-workspace" novalidate>
+        <div class="rewrite-input-column">
+          <div class="field-heading">
+            <label for="rewriteInput">Text to rewrite</label>
+            <span id="rewriteCharacterCount">0 characters</span>
+          </div>
+          <textarea
+            id="rewriteInput"
+            name="text"
+            placeholder="Paste or write text here…"
+            spellcheck="true"
+          ></textarea>
+          <p id="rewriteLimitHint" class="field-hint">
+            Sign in to view your available request limit.
+          </p>
+        </div>
+
+        <fieldset class="rewrite-controls">
+          <legend>Rewrite controls</legend>
+          <label for="rewriteTone">Tone</label>
+          <select id="rewriteTone" name="tone">
+            <option value="neutral">Neutral</option>
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="concise">Concise</option>
+          </select>
+          <label for="rewriteFormality">Formality</label>
+          <select id="rewriteFormality" name="formality">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+          <label for="rewriteStrength">Rewrite strength</label>
+          <select id="rewriteStrength" name="strength">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </fieldset>
+
+        <div class="rewrite-actions">
+          <button id="rewriteSubmitButton" class="btn" type="submit" disabled>Rewrite text</button>
+          <button id="rewriteCancelButton" class="btn btn-secondary" type="button" disabled>
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      <section
+        id="rewriteStatus"
+        class="rewrite-status"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></section>
+      <section
+        id="rewriteUpgradeNotice"
+        class="upgrade-notice"
+        hidden
+        aria-labelledby="rewriteUpgradeTitle"
+      >
+        <h2 id="rewriteUpgradeTitle">Need more room?</h2>
+        <p>
+          Free requests support up to 3,000 characters. Pro supports up to 20,000 characters per
+          request.
+        </p>
+        <a href="/account">View your member plan</a>
+      </section>
+      <section
+        id="rewriteResultPanel"
+        class="rewrite-result"
+        aria-labelledby="rewriteResultTitle"
+        hidden
+      >
+        <div class="field-heading">
+          <h2 id="rewriteResultTitle">Rewritten text</h2>
+          <span id="rewriteUsageSummary"></span>
+        </div>
+        <textarea id="rewriteResult" readonly aria-label="Rewritten text"></textarea>
+        <div class="rewrite-actions">
+          <button id="copyRewriteResultButton" class="btn btn-secondary" type="button">
+            Copy result
+          </button>
+          <button id="downloadRewriteResultButton" class="btn btn-secondary" type="button">
+            Download .txt
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/cookie">Cookie</a>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -25,6 +25,14 @@
         <nav class="nav">
           <a href="/">Home</a>
           <a href="/checker">Free Checker</a>
+          <a href="/rewrite">AI Rewriter</a>
+          <details id="accountMenu" class="account-menu" hidden>
+            <summary>Account</summary>
+            <div class="account-menu-panel">
+              <a href="/account">Member account</a>
+              <button id="menuSignOutButton" type="button">Sign out</button>
+            </div>
+          </details>
         </nav>
       </div>
     </header>
@@ -59,15 +67,61 @@
           <div>
             <dt>Current usage</dt>
             <dd id="accountUsage">—</dd>
+            <progress id="accountUsageProgress" max="1" value="0">0%</progress>
           </div>
         </dl>
 
         <div class="auth-actions">
           <a class="btn" href="/checker">Open Free Checker</a>
+          <a class="btn btn-secondary" href="/rewrite">Open AI Rewriter</a>
           <button id="signOutButton" class="btn btn-secondary" type="button" disabled>
             Sign out
           </button>
         </div>
+        <section
+          id="accountUpgradeNotice"
+          class="upgrade-notice"
+          hidden
+          aria-labelledby="accountUpgradeTitle"
+        >
+          <h2 id="accountUpgradeTitle">Need larger rewrites?</h2>
+          <p>
+            Free requests accept up to 3,000 characters. Pro supports up to 20,000 characters per
+            request.
+          </p>
+          <a href="/rewrite">Open AI Rewriter</a>
+        </section>
+        <section class="account-danger-zone" aria-labelledby="deleteAccountTitle">
+          <h2 id="deleteAccountTitle">Delete account</h2>
+          <p>
+            This permanently removes your member account and current access. Sign in again within
+            the last 10 minutes before confirming.
+          </p>
+          <button id="startDeleteAccountButton" class="btn btn-danger" type="button" disabled>
+            Delete account
+          </button>
+          <div id="deleteAccountConfirmation" class="delete-confirmation" hidden>
+            <p>Confirm permanent account deletion. This action cannot be undone.</p>
+            <p id="reauthenticationNotice" class="auth-status error" hidden>
+              Sign in again before confirming account deletion.
+            </p>
+            <div class="auth-actions">
+              <button id="confirmDeleteAccountButton" class="btn btn-danger" type="button">
+                Confirm deletion
+              </button>
+              <button id="cancelDeleteAccountButton" class="btn btn-secondary" type="button">
+                Cancel
+              </button>
+              <a
+                id="reauthenticateLink"
+                class="btn btn-secondary"
+                href="/login?reauth=1&amp;next=/account"
+                hidden
+                >Sign in again</a
+              >
+            </div>
+          </div>
+        </section>
       </section>
     </main>
 
