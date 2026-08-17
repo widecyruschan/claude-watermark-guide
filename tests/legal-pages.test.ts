@@ -13,7 +13,7 @@ describe('legal page drafts', () => {
     pages.forEach((page, index) => {
       expect(page).toContain(`https://watermarklens.com/${pageNames[index]}`);
       expect(page).toContain('contact@watermarklens.com');
-      expect(page).toContain('Last updated: 16 August 2026');
+      expect(page).toContain('Last updated: 17 August 2026');
       expect(page).toContain('Legal review is still required');
       expect(page).not.toMatch(/\[待确[认定]/u);
     });

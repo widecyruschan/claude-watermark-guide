@@ -40,7 +40,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - 正式網域：`watermarklens.com`
 - 私隱及支援聯絡電郵：`contact@watermarklens.com`
 - 首發市場及語言：美國／英文
-- 分析服務：首頁使用 Plausible-compatible 無 Cookie 統計，不使用 GA4 或 Microsoft Clarity
+- 分析服務：首頁保留 Plausible-compatible 無 Cookie 統計；全站使用 Google Analytics 4（OAuth callback 除外）；不使用 Microsoft Clarity
 - AI 單次輸入上限：Free 3,000 字符；Pro 20,000 字符
 - AI 控制：語氣下拉選單、正式程度低／中／高、重寫強度低／中／高；輸出自動保留輸入語言
 
@@ -370,3 +370,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：更新 `pages/account.html`、`pages/rewrite.html` 及本 README；未讀取、修改或提交任何 `.env`、`.dev.vars`、API Key、Supabase service-role、Stripe Secret 或 Google Secret。
 - 驗證結果：`npm run check` 通過（78 passed、18 skipped），包含格式、Lint、型別、build、110 檔 Secret scan 及全路由 smoke；`npm run test:e2e` 通過（9 passed），desktop 及 390px mobile 均無水平溢出。
 - 後續建議：部署後以 production HTML 再次確認舊錯序字串只存在於禁止回歸測試，不出現在任何可見內容或 metadata。
+
+### 2026-08-17：接入 Google Analytics 4 Google tag
+- 會話主要目的：按要求將 Google tag `G-G04WGCK8BF` 接入網站，量度頁面瀏覽並保留現有 Plausible 統計。
+- 完成的主要任務：在首頁、404、內容頁、法律頁、Login、Account 及 Rewrite 的 `<head>` 加入官方 `gtag.js` snippet；刻意排除 `/auth/callback`，避免 OAuth 授權 query 參數進入 analytics；更新 Privacy、Cookie、Terms 草案及產品設定，披露 GA4、first-party analytics cookies、Google provider 及 opt-out 選項。
+- 關鍵決策和解決方案：Google tag 只記錄頁面層級量度，唔會在程式中傳送重寫原文或結果；Plausible 保持首頁現有接入；法律頁仍標示為草案，適用地區嘅 consent／cookie 要求須由法律及產品負責人審閱。
+- 使用的技術棧：Google Analytics 4、Google `gtag.js`、原生 HTML、Plausible、Vitest、Playwright、Cloudflare Pages。
+- 新增或修改檔案：更新 12 個可量度 HTML 頁面、Privacy／Cookie／Terms 文案、analytics／legal 回歸測試及本 README；`auth/callback.html` 無加入 analytics。未建立或提交任何 Secret；GA Measurement ID 本身不屬於 Secret。
+- 驗證結果：`npm run check` 通過（80 passed、18 skipped）、`npm run test:e2e` 通過（9 passed）、110 檔 Secret scan 通過及全路由 smoke 通過；本機／build tag fixture 與 callback 排除測試通過。Production browser request 會在部署完成後重新核對。
+- 後續建議：部署後使用 Google Tag Assistant 及 GA4 Realtime 確認 `G-G04WGCK8BF` 收到 page_view；如面向需 opt-in consent 嘅地區，先完成 consent mode／CMP 再將 analytics storage 設為 granted。
