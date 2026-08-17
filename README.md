@@ -382,8 +382,8 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 
 ### 2026-08-17：修復登入後公開頁仍顯示 Sign in
 - 會話主要目的：修復會員成功登入後由 Account／Rewrite 跳到首頁、文章、Checker 或法律頁時，導航重新顯示 `Sign in` 嘅問題。
-- 完成的主要任務：以真實已登入 browser session 重現 Account → Rewrite 正常但 Account → Home 失效；確認 Supabase session 已由 `persistSession:true` 正確保存，根因係公開頁只有靜態訪客導航；為 9 個公開頁加入 `data-auth-page="public"`、共享 Account menu 及 `/js/auth.js`；新增 public auth hydration、跨頁 auth state change 同本頁 Sign out 處理。
-- 關鍵決策和解決方案：沿用 Supabase client 讀取及刷新既有 session，唔新增獨立登入旗標、唔手動解析或複製 Token；session hydrate 前 Sign in 同 Account menu 均保持隱藏，完成後只顯示正確狀態；auth config 不可用時安全退回 Sign in。
+- 完成的主要任務：以真實已登入 browser session 重現 Account → Rewrite 正常但 Account → Home 失效；確認 Supabase session 已由 `persistSession:true` 正確保存，根因係公開頁只有靜態訪客導航；為 9 個公開頁加入 `data-auth-page="public"`、共享 Account menu 及 `/js/auth.js`；新增 public auth hydration、跨頁 auth state change 同本頁 Sign out 處理；將所有 auth bundle 引用版本化為 `/js/auth.js?v=public-nav-v1`。
+- 關鍵決策和解決方案：沿用 Supabase client 讀取及刷新既有 session，唔新增獨立登入旗標、唔手動解析或複製 Token；session hydrate 前 Sign in 同 Account menu 均保持隱藏，完成後只顯示正確狀態；auth config 不可用時安全退回 Sign in；Cloudflare 對同名 bundle 設有四小時 browser cache，因此以 query version 令已登入用戶立即取得修正版，毋須清 cache或重新登入。
 - 使用的技術棧：Supabase Auth、原生 HTML／TypeScript、Cloudflare Pages、Vitest、Playwright、Chrome production session 驗證。
 - 新增或修改檔案：更新 `src/client/auth.ts`、首頁、404、Checker、三篇內容頁、三篇法律頁、auth source tests、Playwright regression 及本 README；未讀取、輸出或提交任何真實 session、JWT、Cookie、API Key、`.env` 或 `.dev.vars`。
 - 驗證結果：新增回歸測試先重現 `Sign in` 可見，再修復至通過；`npm run check` 通過（81 passed、18 skipped），`npm run test:e2e` 通過（10 passed），110 檔 Secret scan 及全路由 smoke 通過。

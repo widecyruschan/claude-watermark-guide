@@ -61,7 +61,7 @@ describe('member authentication pages', () => {
       expect(page).toContain('id="signInNavigationLink"');
       expect(page).toContain('id="accountMenu"');
       expect(page).toContain('id="menuSignOutButton"');
-      expect(page).toContain('src="/js/auth.js"');
+      expect(page).toContain('src="/js/auth.js?v=public-nav-v1"');
     }
   });
 
@@ -119,7 +119,7 @@ describe('member authentication pages', () => {
     expect(checkerPage).toContain('href="/rewrite"');
 
     for (const page of [loginPage, callbackPage, accountPage]) {
-      expect(page).toContain('src="/js/auth.js"');
+      expect(page).toContain('src="/js/auth.js?v=public-nav-v1"');
       expect(page).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
       expect(page).not.toContain('EBOND_API_KEY');
       expect(page).not.toContain('REWRITE_API_KEY');
