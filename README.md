@@ -361,3 +361,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：更新全部 HTML 頁面 metadata、四個內容頁 H1／內部連結、`sitemap.xml`、Pages smoke fixture 及 Playwright；新增 `tests/seo.test.ts`；追加本 README。未讀取、修改或提交任何 API Key、`.env`、`.dev.vars`、Supabase service-role、Stripe Secret 或 Google Secret。
 - 驗證結果：`npm run check` 通過（78 passed、18 skipped），包含格式、Lint、型別、build、110 檔 Secret scan 及全路由 smoke；`npm run test:e2e` 通過（9 passed），五個 SEO 主題頁喺 1440px 及 390px viewport 均無水平溢出；SEO 回歸測試確認 metadata 唯一、absolute canonical、JSON-LD 可解析、索引策略及 sitemap 一致。
 - 後續建議：部署後提交 `https://watermarklens.com/sitemap.xml` 至 Google Search Console，對首頁及三篇指南要求重新索引，並以 Search Console Performance 數據觀察 `Claude Text Watermark` 相關 query、CTR 及頁面互相競爭情況；Anthropic rollout 或 detection API 狀態改變時同步更新文章、`dateModified` 及 sitemap `lastmod`。
+
+### 2026-08-17：統一 Claude Text Watermark 關鍵字次序
+- 會話主要目的：將未提交內容中次序錯誤嘅舊關鍵字統一更正為正式關鍵字 `Claude Text Watermark`，並提交至 GitHub。
+- 完成的主要任務：核對首頁、內容頁、JSON-LD、README、smoke 及 E2E fixture 均使用正確關鍵字；Account 與 Rewrite 頁面 title 加入正確關鍵字；保留 SEO 回歸測試對舊字串嘅禁止 assertion。
+- 關鍵決策和解決方案：只更正關鍵字次序，唔改動頁面內容、canonical、索引策略或會員功能；Account 與 Rewrite 繼續保留 `noindex,nofollow`。
+- 使用的技術棧：原生 HTML、Vitest、Playwright、Cloudflare Pages、GitHub Actions。
+- 新增或修改檔案：更新 `pages/account.html`、`pages/rewrite.html` 及本 README；未讀取、修改或提交任何 `.env`、`.dev.vars`、API Key、Supabase service-role、Stripe Secret 或 Google Secret。
+- 驗證結果：`npm run check` 通過（78 passed、18 skipped），包含格式、Lint、型別、build、110 檔 Secret scan 及全路由 smoke；`npm run test:e2e` 通過（9 passed），desktop 及 390px mobile 均無水平溢出。
+- 後續建議：部署後以 production HTML 再次確認舊錯序字串只存在於禁止回歸測試，不出現在任何可見內容或 metadata。
