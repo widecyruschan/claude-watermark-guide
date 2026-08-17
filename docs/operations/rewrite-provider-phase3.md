@@ -88,4 +88,4 @@ Production 已配置 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`，並�
 
 受控 production 會員請求曾回傳 `PROVIDER_UNAVAILABLE`。最終根因並非問問網關或 TLS，而是 Provider 把 workerd 原生 `fetch` 存為 class 欄位後以錯誤 receiver 呼叫，runtime 因此拋出 `Illegal invocation`；Node fetch 對 receiver 較寬鬆，所以早期 Node 直連測試未能重現。Provider 現已把 fetch implementation 綁定到 `globalThis`，並加入 receiver-sensitive 回歸測試。
 
-本機完整會員流程已通過：問問 `chat/completions` 回傳有效文字及 usage，API 回應 HTTP 200，成功請求原子結算 Token／成本／字符；同一輪四個失敗 reservation 全部 release，沒有殘留 `processing`。部署修復版本後，production 仍要以受控會員請求重跑相同 smoke test；不得以未公開域名或第三方代理取代正式 endpoint。
+本機及 production 完整會員流程均已通過：問問 `chat/completions` 回傳有效文字及 usage，API 回應 HTTP 200，成功請求原子結算 Token／成本／字符；診斷期間四個失敗 reservation 全部 release，沒有殘留 `processing`。Production smoke test 顯示 `Rewrite complete.`，最新固定測試句以 `181` input Token、`18` output Token、`145` micro-USD 及 `78` 字符結算。不得以未公開域名或第三方代理取代正式 endpoint。

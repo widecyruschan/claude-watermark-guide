@@ -340,5 +340,5 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 關鍵決策和解決方案：Provider 將 runtime fetch 綁定到 `globalThis`，避免以 class instance 作為 native fetch receiver；Node 直連成功不再視為 workerd 相容性證據；早前「問問與 Cloudflare 網絡／TLS 不相容」判斷已由實際錯誤訊號推翻。
 - 使用的技術棧：Cloudflare workerd／Wrangler Pages dev、TypeScript、Vitest、Supabase Postgres、問問 OpenAI-compatible Chat Completions、Chrome 本機會員流程。
 - 新增或修改檔案：修改 `src/rewrite/openAiCompatibleProvider.ts`、`tests/rewrite/openAiCompatibleProvider.test.ts`、`docs/operations/rewrite-provider-phase3.md` 及本 README；`.dev.vars` 保持 Git ignored，未提交或記錄任何 API Key、service-role key、JWT、正文或模型輸出。
-- 驗證結果：頁面顯示 `Rewrite complete.` 並收到 HTTP 200；成功請求以 `181` input Token、`18` output Token、`145` micro-USD 及 `78` 字符結算；同一輪 `5` 次 reserve 對應 `4` 次 release 及 `1` 次 settle，`processing` 為零，成本公式完全吻合。
-- 後續建議：推送修復並等待 Cloudflare production deployment 後，以非敏感短句重跑 production 會員 smoke test，確認自訂網域同樣回傳 HTTP 200。
+- 驗證結果：本機及 production 頁面均顯示 `Rewrite complete.` 並收到 HTTP 200；固定測試請求以 `181` input Token、`18` output Token、`145` micro-USD 及 `78` 字符結算；診斷期間 `5` 次 reserve 對應 `4` 次 release 及 `1` 次 settle，`processing` 為零，成本公式完全吻合。GitHub Actions 全部通過並完成 Cloudflare Pages deployment，自訂網域 health 及 Auth config 亦為 HTTP 200。
+- 後續建議：使用完整評測集進行語義保留人工審查，並持續監察 production `PROVIDER_*` 標準錯誤率；毋須再要求問問排查 Cloudflare 網絡／TLS。
