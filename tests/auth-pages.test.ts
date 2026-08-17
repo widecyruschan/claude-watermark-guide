@@ -25,6 +25,17 @@ describe('member authentication pages', () => {
     '../pages/terms.html',
     '../pages/what-is-claude-watermark.html',
   ];
+  const authAwarePublicPages = [
+    '../index.html',
+    '../404.html',
+    '../pages/checker.html',
+    '../pages/changes-2026.html',
+    '../pages/cookie.html',
+    '../pages/how-it-works.html',
+    '../pages/privacy.html',
+    '../pages/terms.html',
+    '../pages/what-is-claude-watermark.html',
+  ];
 
   it('uses the same public navigation on every public route', async () => {
     const pages = await Promise.all(
@@ -37,6 +48,20 @@ describe('member authentication pages', () => {
       for (const link of publicNavigation) {
         expect(page).toContain(link);
       }
+    }
+  });
+
+  it('hydrates persisted sessions in every public navigation', async () => {
+    const pages = await Promise.all(
+      authAwarePublicPages.map((path) => readFile(new URL(path, import.meta.url), 'utf8')),
+    );
+
+    for (const page of pages) {
+      expect(page).toContain('data-auth-page="public"');
+      expect(page).toContain('id="signInNavigationLink"');
+      expect(page).toContain('id="accountMenu"');
+      expect(page).toContain('id="menuSignOutButton"');
+      expect(page).toContain('src="/js/auth.js"');
     }
   });
 

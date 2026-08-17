@@ -24,6 +24,7 @@
   <meta name="twitter:description" content="A dated, source-backed timeline of Claude's 2026 text watermark rollout and detector availability." />
   <link rel="stylesheet" href="/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
+  <script defer src="/js/auth.js"></script>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -39,9 +40,9 @@
     }
   </script>
 </head>
-<body>
+<body data-auth-page="public">
   <header class="site-header"><div class="container"><a class="brand" href="/">Watermark Lens</a>
-    <nav class="nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/what-is-claude-watermark">What Is</a><a href="/how-it-works">How It Works</a><a href="/changes-2026">What Changed</a><a href="/checker">Free Checker</a><a href="/rewrite">AI Rewriter</a><a href="/login">Sign in</a></nav></div></header>
+    <nav class="nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/what-is-claude-watermark">What Is</a><a href="/how-it-works">How It Works</a><a href="/changes-2026">What Changed</a><a href="/checker">Free Checker</a><a href="/rewrite">AI Rewriter</a><a id="signInNavigationLink" href="/login" hidden>Sign in</a><details id="accountMenu" class="account-menu" hidden><summary>Account</summary><div class="account-menu-panel"><a href="/account">Member account</a><button id="menuSignOutButton" type="button">Sign out</button></div></details></nav></div></header>
 
   <main class="container">
     <div class="article-layout">

@@ -108,6 +108,61 @@ test('legal pages retain the complete public navigation', async ({ page }) => {
   ).toBe(true);
 });
 
+test('authenticated navigation persists across public pages', async ({ page }) => {
+  const expiresAt = Math.floor(Date.now() / 1000) + 3_600;
+  const encodedHeader = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString(
+    'base64url',
+  );
+  const encodedPayload = Buffer.from(
+    JSON.stringify({
+      aud: 'authenticated',
+      email: 'member-navigation@example.test',
+      exp: expiresAt,
+      role: 'authenticated',
+      sub: '11111111-1111-4111-8111-111111111111',
+    }),
+  ).toString('base64url');
+  const user = {
+    app_metadata: { provider: 'email', providers: ['email'] },
+    aud: 'authenticated',
+    created_at: new Date().toISOString(),
+    email: 'member-navigation@example.test',
+    id: '11111111-1111-4111-8111-111111111111',
+    role: 'authenticated',
+    user_metadata: {},
+  };
+
+  await page.goto('/login');
+  const supabaseUrl = await page.evaluate(async () => {
+    const response = await fetch('/api/v1/auth/config');
+    const body = (await response.json()) as { data: { supabaseUrl: string } };
+    return body.data.supabaseUrl;
+  });
+  const projectRef = new URL(supabaseUrl).hostname.split('.')[0];
+  await page.evaluate(
+    ({ session, storageKey }) => {
+      localStorage.setItem(storageKey, JSON.stringify(session));
+    },
+    {
+      session: {
+        access_token: `${encodedHeader}.${encodedPayload}.fixture-signature`,
+        expires_at: expiresAt,
+        expires_in: 3_600,
+        refresh_token: 'fixture-refresh-token',
+        token_type: 'bearer',
+        user,
+      },
+      storageKey: `sb-${projectRef}-auth-token`,
+    },
+  );
+
+  for (const path of ['/', '/checker', '/privacy']) {
+    await page.goto(path);
+    await expect(page.getByRole('link', { name: 'Sign in' })).toBeHidden();
+    await expect(page.locator('#accountMenu')).toBeVisible();
+  }
+});
+
 test('account requires an authenticated session', async ({ page }) => {
   await page.goto('/account');
   await expect(page).toHaveURL(/\/login$/);

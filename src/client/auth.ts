@@ -343,6 +343,30 @@ function getAuthCallbackUrl(): string {
   return callbackUrl.toString();
 }
 
+function setPublicNavigationSessionState(session: Session | null): void {
+  getElement('signInNavigationLink', HTMLAnchorElement).hidden = session !== null;
+  getElement('accountMenu', HTMLDetailsElement).hidden = session === null;
+}
+
+async function initializePublicPage(client: SupabaseClient): Promise<void> {
+  const {
+    data: { session },
+  } = await client.auth.getSession();
+  setPublicNavigationSessionState(session);
+
+  const {
+    data: { subscription },
+  } = client.auth.onAuthStateChange((_event, nextSession) => {
+    setPublicNavigationSessionState(nextSession);
+  });
+  window.addEventListener('pagehide', () => subscription.unsubscribe(), { once: true });
+
+  getElement('menuSignOutButton', HTMLButtonElement).addEventListener('click', async () => {
+    const { error } = await client.auth.signOut({ scope: 'local' });
+    if (!error) setPublicNavigationSessionState(null);
+  });
+}
+
 async function initializeAccountPage(client: SupabaseClient): Promise<void> {
   const {
     data: { session },
@@ -617,7 +641,7 @@ async function deleteAccount(client: SupabaseClient): Promise<void> {
 async function initializeAuthPage(): Promise<void> {
   const page = document.body.dataset.authPage;
 
-  if (page !== 'login' && page !== 'callback' && page !== 'account') {
+  if (page !== 'login' && page !== 'callback' && page !== 'account' && page !== 'public') {
     return;
   }
 
@@ -629,10 +653,17 @@ async function initializeAuthPage(): Promise<void> {
       await initializeLoginPage(client);
     } else if (page === 'callback') {
       await initializeCallbackPage(client);
-    } else {
+    } else if (page === 'account') {
       await initializeAccountPage(client);
+    } else {
+      await initializePublicPage(client);
     }
   } catch {
+    if (page === 'public') {
+      setPublicNavigationSessionState(null);
+      return;
+    }
+
     setStatus('Authentication is temporarily unavailable. Please try again later.', true);
 
     if (page === 'callback') {
