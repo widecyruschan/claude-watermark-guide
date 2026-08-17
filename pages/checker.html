@@ -3,9 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Local Text Signal Checker (Free, Client-Side)</title>
-  <meta name="description" content="Inspect invisible Unicode and surface-level text signals locally. This is not Anthropic's Claude watermark detector." />
-  <link rel="canonical" href="/checker" />
+  <title>Claude Text Watermark Checker: Local Signal Inspection</title>
+  <meta name="description" content="Understand Claude Text Watermark checker limits and inspect invisible Unicode or surface-level text signals locally. This is not Anthropic's detector." />
+  <link rel="canonical" href="https://watermarklens.com/checker" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Watermark Lens" />
+  <meta property="og:title" content="Claude Text Watermark Checker: Local Signal Inspection" />
+  <meta property="og:description" content="Inspect generic text signals locally and understand why official Claude watermark detection requires Anthropic's keyed detector." />
+  <meta property="og:url" content="https://watermarklens.com/checker" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Claude Text Watermark Checker: Local Signal Inspection" />
+  <meta name="twitter:description" content="Inspect generic text signals locally and understand why official Claude watermark detection requires Anthropic's keyed detector." />
   <link rel="stylesheet" href="/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
 </head>
@@ -26,8 +34,8 @@
   </header>
 
   <main class="container" style="padding-top:32px">
-    <h1>Local Text Signal Checker (Free, Client-Side)</h1>
-    <p class="subhead" style="color:var(--text-muted)">Your text is processed in your browser only. It is never uploaded to any server.</p>
+    <h1>Claude Text Watermark Checker: What This Local Tool Can Inspect</h1>
+    <p class="subhead" style="color:var(--text-muted)">This is not Anthropic's Claude watermark detector. Your text is processed in your browser only. It is never uploaded to any server.</p>
 
     <div class="tool-card" style="max-width:720px">
       <h3>Paste text to inspect</h3>
@@ -36,6 +44,10 @@
       <div id="result" class="result" aria-live="polite" hidden></div>
       <p class="disclaimer">This checker only reports invisible Unicode and generic surface-level writing signals. Anthropic says Claude's text watermark adds no hidden characters and requires a keyed detector. Anthropic has announced, but not yet released, a public detection API. This tool cannot detect, remove, or bypass that watermark. <a href="https://www.anthropic.com/news/claude-text-watermark">Read Anthropic's technical explainer</a>.</p>
     </div>
+    <section class="tool-separator" aria-labelledby="watermarkGuideTitle">
+      <h2 id="watermarkGuideTitle">Understand Claude Text Watermark Detection</h2>
+      <p>Claude's official mark is a keyed statistical pattern, not hidden Unicode. Read the <a href="/what-is-claude-watermark">plain-English definition</a>, learn <a href="/how-it-works">how the watermark works</a>, or review the <a href="/changes-2026">2026 rollout status</a>.</p>
+    </section>
     <section class="tool-separator" aria-labelledby="aiRewriteTitle">
       <h2 id="aiRewriteTitle">AI Text Rewriter</h2>
       <p>AI rewriting is a separate, account-based feature. It sends only the text you choose to submit to the rewrite service and uses your member allowance.</p>

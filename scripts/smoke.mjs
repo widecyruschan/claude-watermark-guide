@@ -87,10 +87,10 @@ try {
   await waitForServer();
   const pageChecks = [
     ['/', 'Claude Text Watermark: How It Works, Rollout, and Limits'],
-    ['/what-is-claude-watermark', "What Is Claude's Invisible Text Watermark"],
-    ['/how-it-works', "How Claude's Watermarking Works"],
-    ['/changes-2026', 'What Changed in Claude Watermarking Recently'],
-    ['/checker', 'Local Text Signal Checker'],
+    ['/what-is-claude-watermark', 'What Is a Claude Text Watermark?'],
+    ['/how-it-works', 'How the Claude Text Watermark Works'],
+    ['/changes-2026', 'Claude Text Watermark: 2026 Rollout and Detection Status'],
+    ['/checker', 'Claude Text Watermark Checker: What This Local Tool Can Inspect'],
     ['/rewrite', 'AI Text Rewriter'],
     ['/login', 'Sign in to Watermark Lens'],
     ['/account', 'Your account'],

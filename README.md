@@ -352,3 +352,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：更新首頁、Checker、三篇內容頁、sitemap、README、PRD、Stripe 運維手冊及 Checker 測試；新增 `tests/content-pages.test.ts`，未修改或提交任何 Secret、`.env` 或 `.dev.vars`。
 - 驗證結果：公開內容及產品文件不再包含 editorial placeholder；內容來源、review date、Checker 邊界回歸測試通過；What Changed 在 1440px 及 390px viewport 均無橫向溢出。
 - 後續建議：Anthropic 公開 detection API 或舊模型 rollout 完成後，重新核對三篇文章；法律頁正式化前須由產品負責人提供營運主體及法律決定，並交由美國法律顧問審閱。
+
+### 2026-08-17：全站 Claude Text Watermark SEO 優化
+- 會話主要目的：以 `Claude Text Watermark` 為主關鍵字，改善所有頁面嘅搜尋意圖、metadata、索引控制及內部連結，同時避免 keyword stuffing 或將本機 Checker 誤稱為官方 detector。
+- 完成的主要任務：為首頁、定義、原理、2026 rollout 及 Checker 建立獨立 title、description、H1 與搜尋意圖；全站 canonical 改為 `https://watermarklens.com` absolute URL；公開頁加入 Open Graph／Twitter metadata；首頁加入 WebSite／Organization JSON-LD，三篇指南加入 Article／TechArticle JSON-LD；加入相關指南內部連結；sitemap 只保留可索引 canonical URL 及準確 `lastmod`；Login、Rewrite、Account、callback 及 404 保持 `noindex`。
+- 關鍵決策和解決方案：依照 Google Search Central 指引使用精確而不重複嘅 title，主關鍵字只集中於相關內容群；法律頁及會員／系統頁保留各自用途，唔強行加入關鍵字；robots.txt 允許 crawler 讀取 `noindex`，避免因封鎖抓取而令索引指令失效；不加入虛假 review、rating、作者或未在頁面出現嘅結構化資料。
+- 使用的技術棧：原生 HTML、Open Graph、Twitter Card、Schema.org JSON-LD、XML sitemap、Vitest、Playwright、Cloudflare Pages、Google Search Central。
+- 新增或修改檔案：更新全部 HTML 頁面 metadata、四個內容頁 H1／內部連結、`sitemap.xml`、Pages smoke fixture 及 Playwright；新增 `tests/seo.test.ts`；追加本 README。未讀取、修改或提交任何 API Key、`.env`、`.dev.vars`、Supabase service-role、Stripe Secret 或 Google Secret。
+- 驗證結果：`npm run check` 通過（78 passed、18 skipped），包含格式、Lint、型別、build、110 檔 Secret scan 及全路由 smoke；`npm run test:e2e` 通過（9 passed），五個 SEO 主題頁喺 1440px 及 390px viewport 均無水平溢出；SEO 回歸測試確認 metadata 唯一、absolute canonical、JSON-LD 可解析、索引策略及 sitemap 一致。
+- 後續建議：部署後提交 `https://watermarklens.com/sitemap.xml` 至 Google Search Console，對首頁及三篇指南要求重新索引，並以 Search Console Performance 數據觀察 `Claude Text Watermark` 相關 query、CTR 及頁面互相競爭情況；Anthropic rollout 或 detection API 狀態改變時同步更新文章、`dateModified` 及 sitemap `lastmod`。

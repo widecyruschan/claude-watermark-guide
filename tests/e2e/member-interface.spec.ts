@@ -1,5 +1,40 @@
 import { expect, test } from '@playwright/test';
 
+const seoContentRoutes = [
+  { heading: 'Claude Text Watermark: How It Works, Rollout, and Limits', path: '/' },
+  { heading: 'What Is a Claude Text Watermark?', path: '/what-is-claude-watermark' },
+  { heading: 'How the Claude Text Watermark Works', path: '/how-it-works' },
+  {
+    heading: 'Claude Text Watermark: 2026 Rollout and Detection Status',
+    path: '/changes-2026',
+  },
+  {
+    heading: 'Claude Text Watermark Checker: What This Local Tool Can Inspect',
+    path: '/checker',
+  },
+];
+
+for (const viewport of [
+  { height: 900, name: 'desktop', width: 1440 },
+  { height: 844, name: 'mobile', width: 390 },
+]) {
+  test(`SEO content headings are visible without overflow on ${viewport.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: viewport.height, width: viewport.width });
+
+    for (const route of seoContentRoutes) {
+      await page.goto(route.path);
+      await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible();
+      expect(
+        await page
+          .locator('html')
+          .evaluate((documentElement) => documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+    }
+  });
+}
+
 for (const viewport of [
   { height: 900, name: 'desktop', width: 1440 },
   { height: 844, name: 'mobile', width: 390 },
@@ -31,7 +66,9 @@ for (const viewport of [
     await page.goto('/changes-2026');
 
     await expect(
-      page.getByRole('heading', { name: 'What Changed in Claude Watermarking Recently' }),
+      page.getByRole('heading', {
+        name: 'Claude Text Watermark: 2026 Rollout and Detection Status',
+      }),
     ).toBeVisible();
     await expect(page.getByText('Last reviewed: August 17, 2026.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Anthropic', exact: true }).first()).toBeVisible();
