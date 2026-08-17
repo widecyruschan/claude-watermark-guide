@@ -1,5 +1,5 @@
 /* ============================================================
-   Claude Watermark Self-Check — CLIENT-SIDE ONLY
+   Local Text Signal Checker - CLIENT-SIDE ONLY
    Per datacontract 3.2.1: text never leaves the browser.
    Heuristic only — NOT official, NOT guaranteed accurate.
    No "remove/bypass" logic (PRD NOT-DO / compliance banned words).
@@ -7,8 +7,8 @@
 (function () {
   "use strict";
 
-  // Publicly-known heuristic signals for AI-text watermarking discussion.
-  // These are transparent checks on the INPUT TEXT ONLY — no API, no upload.
+  // Generic surface-level text signals. These are not Claude watermark signals.
+  // Checks run on the input text only, with no API or upload.
   function analyze(text) {
     var signals = [];
     var score = 0;
@@ -31,35 +31,35 @@
     var reps = (text.match(/(\b\w+\b)(?:\s+\1\b)+/gi) || []).length;
     if (reps >= 3) { signals.push("repeated phrase patterns (" + reps + ")"); score += 0.2; }
 
-    var confidence = Math.min(1, score);
+    var signalScore = Math.min(1, score);
     var verdict;
     if (signals.length === 0) {
-      verdict = "not_detected";
-    } else if (confidence >= 0.5) {
-      verdict = "likely_marked";
+      verdict = "no_signals";
+    } else if (signalScore >= 0.5) {
+      verdict = "signals_found";
     } else {
-      verdict = "uncertain";
+      verdict = "weak_signals";
     }
-    return { verdict: verdict, confidence: confidence, signals: signals };
+    return { verdict: verdict, signalScore: signalScore, signals: signals };
   }
 
   function render(res) {
     var box = document.getElementById("result");
     var label = {
-      likely_marked: "Possibly carries an invisible marker",
-      not_detected: "No heuristic signals found",
-      uncertain: "Inconclusive — weak signals only"
+      signals_found: "Multiple surface-level signals found",
+      no_signals: "No inspected artifacts found",
+      weak_signals: "Limited surface-level signals found"
     }[res.verdict];
-    var cls = { likely_marked: "likely", not_detected: "not", uncertain: "uncertain" }[res.verdict];
+    var cls = { signals_found: "likely", no_signals: "not", weak_signals: "uncertain" }[res.verdict];
     var sig = res.signals.length
       ? "<ul>" + res.signals.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ul>"
       : "<p>No transparent heuristic signals detected in this text.</p>";
     box.className = "result " + cls;
     box.hidden = false;
     box.innerHTML =
-      "<strong>" + label + "</strong> (confidence " + res.confidence.toFixed(2) + ")" +
+      "<strong>" + label + "</strong> (signal score " + res.signalScore.toFixed(2) + ")" +
       sig +
-      "<p class='disclaimer'>Heuristic, client-side check only. This is NOT an official Anthropic tool and does NOT guarantee detection accuracy. It cannot remove or bypass any watermark. Results are indicative, not conclusive.</p>";
+      "<p class='disclaimer'>Local surface inspection only. Claude's official text watermark does not use hidden characters, and this result is not watermark detection. This tool cannot remove or bypass a watermark.</p>";
   }
 
   function run() {

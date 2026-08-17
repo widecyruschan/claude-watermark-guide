@@ -61,10 +61,10 @@
 ## 產品決策及假設
 
 - 首個版本面向美國市場，以英文提供產品及服務，付費方案使用 USD 月付。
-- Pro 暫定為 `US$9/月`，正式建立 Stripe Price 前由產品負責人最終確認。
-- Free 每月 10,000 個輸入字符仍屬暫定；單次最多 3,000 字符已確認。
-- Pro 每個帳單週期 500,000 個輸入字符仍屬暫定；單次最多 20,000 字符已確認。
-- 重寫控制包括語氣下拉選單、正式程度（低／中／高）及重寫強度（低／中／高）。語氣的正式 allowlist 仍須在 Phase 4 開發前確認。
+- Pro 已確認為 `US$9/月`，使用 USD 月付。
+- Free 每月 10,000 個輸入字符，單次最多 3,000 字符。
+- Pro 每個帳單週期 500,000 個輸入字符，單次最多 20,000 字符。產品另有每期 200 次改寫目標，但目前只執行字符配額，對外宣傳前須加入獨立 request-count enforcement。
+- 重寫控制包括語氣 `neutral`、`professional`、`friendly`、`concise`，以及正式程度與重寫強度 `low`、`medium`、`high`。
 - 系統自動識別並保留用戶的輸入語言，首個版本不提供手動語言選單。
 - 用戶介面以輸入字符作為容易理解的配額單位，後台同時記錄實際 input/output Token 及估算成本。
 - 首個版本不提供年付、團隊帳戶、按量增值套裝或中國內地本地付款。
@@ -154,11 +154,12 @@
 | 本機字符工具 | 無限 | 無限 | 無限 |
 | AI 文字重寫 | 否 | 是 | 是 |
 | 每月輸入字符 | 0 | 10,000 | 500,000 |
+| 每期改寫次數目標 | 0 | 不適用 | 200（尚未獨立執行） |
 | 單次請求上限 | 不適用 | 3,000 | 20,000 |
 | 帳單 Portal | 否 | 否 | 是 |
 | 已保存文字歷史 | 否 | 否 | 否 |
 
-- 表內 10,000／500,000 週期配額仍屬暫定；3,000／20,000 單次上限已確認。
+- 表內 10,000／500,000 週期配額及 3,000／20,000 單次上限均為現行設定；200 次改寫仍須新增 request-count enforcement。
 - Free 配額在每月第一日 00:00 UTC 重設。
 - Pro 配額跟隨 Stripe 帳單週期。
 - 未使用配額不會累積至下一週期。
@@ -321,9 +322,9 @@ sequenceDiagram
 工作：
 
 - 確認最終產品用語：「Invisible Character Cleaner」及「AI Text Rewriter」。
-- 確認暫定的 Free／Pro 月度配額及 `US$9/month` 價格；3,000／20,000 單次上限已鎖定。
+- 記錄 Free／Pro 字符配額、`US$9/month` 價格及 3,000／20,000 單次上限；另為 Pro 每期 200 次改寫建立可驗證的 request-count contract。
 - 記錄 US／English 首發決定、`watermarklens.com` 網域及 `contact@watermarklens.com` 聯絡地址。
-- 確認語氣 allowlist；正式程度及重寫強度使用 `low`、`medium`、`high`，語言自動跟隨輸入。
+- 鎖定語氣 allowlist 為 `neutral`、`professional`、`friendly`、`concise`；正式程度及重寫強度使用 `low`、`medium`、`high`，語言自動跟隨輸入。
 - 建立 50 至 100 個評測樣本，涵蓋人手撰寫、AI 輔助、事實密集、引用密集及含格式文字。
 - 定義 Prompt 驗收準則：保留意思、不新增事實、不移除引用，以及達到可接受的風格改動。
 
@@ -539,4 +540,4 @@ sequenceDiagram
 - 本 PRD 初稿編寫時，repository 尚未有自動測試 framework、package manifest、Supabase schema 或 Pages Functions source；這些均屬實施交付項目，而不是當時已有功能。
 - Production 必須以 Cloudflare encrypted Secret 配置 `REWRITE_API_KEY`；Wrangler 只可確認 binding 存在，不可顯示其值。
 - MVP 已用同一 Pages 專案的 Pages Functions 取代先前建議的獨立 API Worker，因為 Secret 及部署已屬於 Pages 專案。獨立 Worker 可保留作未來擴展選項，但不是首發要求。
-- 首發市場已確認為 US／English。仍待確認的產品決策包括 Pro 正式價格、Free／Pro 月度配額及語氣 allowlist；技術方案不再依賴其他未解決的架構選擇。
+- 首發市場為 US／English；Pro 價格、字符配額及語氣 allowlist 已鎖定。每期 200 次改寫係額外產品目標，必須在資料庫及 API 加入 request-count enforcement 後才視為已交付。

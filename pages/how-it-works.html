@@ -18,27 +18,37 @@
       <nav class="toc"><a href="#mech">The Mechanism</a><a href="#public">What's Public</a><a href="#not">What's Not</a><a href="#limit">Limitations</a><a href="#faq">FAQ</a></nav>
       <article class="article">
         <h1>How Claude's Watermarking Works (Technical, Plain English)</h1>
-        <p>This page explains the publicly documented aspects of Claude's watermarking. Where details are not public, we say so—we do not fabricate internals.</p>
+        <p>This page summarizes Anthropic's published explanation of Claude's SynthID-Text watermark. It separates current documentation from details that Anthropic has not yet released.</p>
 
         <h2 id="mech">The Mechanism</h2>
-        <p>Watermarking generally works by biasing the token-selection process during generation so the output carries a statistical signal. [待确认: cite public technical notes; do not fabricate specifics]</p>
+        <p>Claude generates text by selecting one next token at a time. When several choices are similarly suitable, Anthropic says its version of SynthID-Text uses a secret key plus preceding words to choose the source of randomness. Across a long enough passage, those choices form a statistical pattern that a detector with the key can test. The system does not add hidden characters or extra tokens.</p>
 
         <h2 id="public">What's Publicly Known</h2>
         <ul>
-          <li>Anthropic has discussed watermarking as a transparency measure for AI text.</li>
-          <li>Detection is performed by a corresponding classifier rather than by reading visible text.</li>
+          <li>Models launched in the EU on or after August 2, 2026 support marking at launch; older models are in a transition rollout.</li>
+          <li>The method is a version of SynthID-Text, published by Google DeepMind in 2024.</li>
+          <li>Marks apply across supported Claude products, API access, cloud partners, and regions.</li>
+          <li>The key does not encode a user, organization, or chat identity.</li>
+          <li>Code, factual passages, and light proofreading may carry a weaker signal because fewer word choices are available.</li>
         </ul>
 
         <h2 id="not">What's Not Public</h2>
-        <p>The exact algorithm, model internals, and thresholds are not publicly documented. [待确认]</p>
+        <p>Anthropic has not published its production key, confidence thresholds, detector implementation, or public detection API. It says a detection API and further technical documentation are forthcoming. This site therefore cannot perform official Claude watermark detection.</p>
 
         <h2 id="limit">Limitations</h2>
-        <p>Watermarks can be weakened by heavy editing, translation, or paraphrasing. Detection is probabilistic, not certain.</p>
+        <p>Detection is probabilistic. Short samples offer less evidence, and heavily edited, paraphrased, translated, or mixed text may lose a detectable signal. A positive result only suggests Claude may have processed the text; a negative result does not prove that no AI was involved.</p>
 
         <div class="faq">
-          <details><summary>Can I detect the watermark myself?</summary><p>Our free checker offers a transparent heuristic only—not authoritative detection.</p></details>
-          <details><summary>Is the mechanism open-source?</summary><p>No. We do not claim the mechanism is open-source.</p></details>
+          <details><summary>Can I detect the watermark myself?</summary><p>Not with this site's checker. Anthropic says its official detection API is still in development.</p></details>
+          <details><summary>Is the mechanism public?</summary><p>The SynthID-Text design and research paper are public. Anthropic has not published its production key, detector, or operating thresholds.</p></details>
         </div>
+
+        <h2>Sources</h2>
+        <ul>
+          <li><a href="https://www.anthropic.com/news/claude-text-watermark">Anthropic: How Claude's text watermark works</a>, August 14, 2026</li>
+          <li><a href="https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content">Claude Help Center: How Claude marks AI-generated content</a></li>
+          <li><a href="https://www.nature.com/articles/s41586-024-08025-4">Nature: Scalable watermarking for identifying large language model outputs</a>, 2024</li>
+        </ul>
       </article>
     </div>
   </main>

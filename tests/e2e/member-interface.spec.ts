@@ -22,6 +22,27 @@ for (const viewport of [
   });
 }
 
+for (const viewport of [
+  { height: 900, name: 'desktop', width: 1440 },
+  { height: 844, name: 'mobile', width: 390 },
+]) {
+  test(`source-backed watermark timeline is responsive on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ height: viewport.height, width: viewport.width });
+    await page.goto('/changes-2026');
+
+    await expect(
+      page.getByRole('heading', { name: 'What Changed in Claude Watermarking Recently' }),
+    ).toBeVisible();
+    await expect(page.getByText('Last reviewed: August 17, 2026.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Anthropic', exact: true }).first()).toBeVisible();
+    expect(
+      await page
+        .locator('html')
+        .evaluate((documentElement) => documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  });
+}
+
 test('login provides Magic Link and Google sign-in without overflowing', async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });
   await page.goto('/login');

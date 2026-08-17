@@ -32,7 +32,7 @@ describe('Free Checker browser script', () => {
     clickHandler?.();
     expect(result.hidden).toBe(false);
     expect(result.className).toBe('result not');
-    expect(result.innerHTML).toContain('No heuristic signals found');
+    expect(result.innerHTML).toContain('No inspected artifacts found');
 
     input.value = '   ';
     clickHandler?.();

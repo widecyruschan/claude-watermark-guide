@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Claude Watermark Self-Check (Free, Client-Side)</title>
-  <meta name="description" content="Free client-side heuristic self-check for Claude's invisible text watermark. Your text stays in your browser—never uploaded." />
+  <title>Local Text Signal Checker (Free, Client-Side)</title>
+  <meta name="description" content="Inspect invisible Unicode and surface-level text signals locally. This is not Anthropic's Claude watermark detector." />
   <link rel="canonical" href="/checker" />
   <link rel="stylesheet" href="/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
@@ -26,15 +26,15 @@
   </header>
 
   <main class="container" style="padding-top:32px">
-    <h1>Claude Watermark Self-Check (Free, Client-Side)</h1>
+    <h1>Local Text Signal Checker (Free, Client-Side)</h1>
     <p class="subhead" style="color:var(--text-muted)">Your text is processed in your browser only. It is never uploaded to any server.</p>
 
     <div class="tool-card" style="max-width:720px">
-      <h3>Paste text to check</h3>
+      <h3>Paste text to inspect</h3>
       <textarea id="input" placeholder="Paste the text you want to check (max 20000 characters)…"></textarea>
-      <p style="margin-top:12px"><button class="btn" id="checkBtn">Check my text</button></p>
+      <p style="margin-top:12px"><button class="btn" id="checkBtn">Inspect my text</button></p>
       <div id="result" class="result" aria-live="polite" hidden></div>
-      <p class="disclaimer">This is a transparent, client-side heuristic. It is <strong>not</strong> an official Anthropic tool and does <strong>not</strong> guarantee detection accuracy. It cannot remove or bypass any watermark. Results are indicative only.</p>
+      <p class="disclaimer">This checker only reports invisible Unicode and generic surface-level writing signals. Anthropic says Claude's text watermark adds no hidden characters and requires a keyed detector. Anthropic has announced, but not yet released, a public detection API. This tool cannot detect, remove, or bypass that watermark. <a href="https://www.anthropic.com/news/claude-text-watermark">Read Anthropic's technical explainer</a>.</p>
     </div>
     <section class="tool-separator" aria-labelledby="aiRewriteTitle">
       <h2 id="aiRewriteTitle">AI Text Rewriter</h2>

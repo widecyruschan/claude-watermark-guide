@@ -86,11 +86,11 @@ async function verifyResponse(path, expectedText) {
 try {
   await waitForServer();
   const pageChecks = [
-    ['/', "Claude's Invisible Text Watermark"],
+    ['/', 'Claude Text Watermark: How It Works, Rollout, and Limits'],
     ['/what-is-claude-watermark', "What Is Claude's Invisible Text Watermark"],
     ['/how-it-works', "How Claude's Watermarking Works"],
     ['/changes-2026', 'What Changed in Claude Watermarking Recently'],
-    ['/checker', 'Claude Watermark Self-Check'],
+    ['/checker', 'Local Text Signal Checker'],
     ['/rewrite', 'AI Text Rewriter'],
     ['/login', 'Sign in to Watermark Lens'],
     ['/account', 'Your account'],

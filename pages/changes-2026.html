@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>What Changed in Claude Watermarking Recently</title>
-  <meta name="description" content="Timeline and before-vs-after comparison of recent changes to Claude's invisible text watermark, with community and media coverage." />
+  <meta name="description" content="A dated, source-backed timeline of Claude's 2026 text watermark rollout, current detection status, and practical limitations." />
   <link rel="canonical" href="/changes-2026" />
   <link rel="stylesheet" href="/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:opsz@8..60&display=swap" rel="stylesheet" />
@@ -15,30 +15,43 @@
 
   <main class="container">
     <div class="article-layout">
-      <nav class="toc"><a href="#timeline">Timeline</a><a href="#before">Before vs After</a><a href="#community">Community</a><a href="#media">Media</a></nav>
+      <nav class="toc"><a href="#timeline">Timeline</a><a href="#before">Current Status</a><a href="#community">Takeaways</a><a href="#media">Sources</a></nav>
       <article class="article">
-        <p style="color:var(--warn);font-size:14px">⚠ Last reviewed: [待确认]. Watermark details change—verify against official sources before relying on this page.</p>
+        <p class="disclaimer"><strong>Last reviewed:</strong> August 17, 2026. Rollout and detector availability may change; source links below are the authority.</p>
         <h1>What Changed in Claude Watermarking Recently</h1>
 
         <h2 id="timeline">Timeline</h2>
         <table>
           <tr><th>Date</th><th>Event</th><th>Source</th></tr>
-          <tr><td>[待确认]</td><td>Public discussion of watermark updates</td><td>Claude Help Center</td></tr>
-          <tr><td>[待确认]</td><td>Media coverage</td><td>Forbes</td></tr>
+          <tr><td>July 2026</td><td>Anthropic signed the EU Code of Practice on Transparency of AI-Generated Content.</td><td><a href="https://www.anthropic.com/news/claude-text-watermark">Anthropic</a></td></tr>
+          <tr><td>August 2, 2026</td><td>Claude models launched in the EU from this date support machine-readable marking at launch; Anthropic applies supported marks worldwide.</td><td><a href="https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content">Claude Help Center</a></td></tr>
+          <tr><td>August 12, 2026</td><td>Independent coverage explained the new-model rollout and the difference between statistical text marks and file provenance metadata.</td><td><a href="https://www.techradar.com/ai-platforms-assistants/claude/new-models-will-mark-ai-generated-content-from-day-one-claude-will-now-hide-an-invisible-watermark-inside-ordinary-words-heres-how-thats-even-possible-and-how-eu-rules-could-push-openai-and-google-to-follow-suit">TechRadar</a></td></tr>
+          <tr><td>August 14, 2026</td><td>Anthropic identified its method as a version of SynthID-Text and explained how keyed word-choice patterns work.</td><td><a href="https://www.anthropic.com/news/claude-text-watermark">Anthropic</a></td></tr>
         </table>
 
-        <h2 id="before">Before vs After</h2>
+        <h2 id="before">Current Published Status</h2>
         <table>
-          <tr><th>Aspect</th><th>Before</th><th>After</th></tr>
-          <tr><td>Visibility</td><td>[待确认]</td><td>[待确认]</td></tr>
-          <tr><td>Detection</td><td>[待确认]</td><td>[待确认]</td></tr>
+          <tr><th>Aspect</th><th>Earlier models or position</th><th>Current published position</th></tr>
+          <tr><td>Model rollout</td><td>Models launched before August 2, 2026 fall under a transition period.</td><td>New supported models carry marks at launch; Anthropic is adding support to older models.</td></tr>
+          <tr><td>Text mechanism</td><td>No implementation detail was cited on this site.</td><td>Anthropic identifies a version of SynthID-Text that changes keyed word-choice randomness and adds no hidden characters.</td></tr>
+          <tr><td>Detection access</td><td>No public Anthropic detector was available.</td><td>A detection API has been announced but was not public as of August 17, 2026.</td></tr>
+          <tr><td>Meaning of a result</td><td>Often discussed as proof of AI authorship.</td><td>Anthropic says a mark only suggests Claude may have processed the content.</td></tr>
         </table>
 
-        <h2 id="community">Community Reaction</h2>
-        <p>Reddit threads discuss user-observed behavior. These are anecdotal, not authoritative. [待确认: link/summarize without fabricating]</p>
+        <h2 id="community">Practical Takeaways</h2>
+        <ul>
+          <li>Invisible Unicode characters are not Claude's official text watermark.</li>
+          <li>Short, factual, code-heavy, or lightly proofread passages may contain too little signal for reliable detection.</li>
+          <li>Heavy rewriting can weaken the signal, but this site does not provide watermark removal or bypass tools.</li>
+          <li>A detected mark cannot establish authorship, ownership, or whether Claude wrote rather than edited the text.</li>
+        </ul>
 
-        <h2 id="media">Media Coverage</h2>
-        <p>Forbes and other outlets have covered watermarking topics. [待确认: cite specific articles]</p>
+        <h2 id="media">Sources and Coverage</h2>
+        <ul>
+          <li><a href="https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content">Claude Help Center: How Claude marks AI-generated content</a></li>
+          <li><a href="https://www.anthropic.com/news/claude-text-watermark">Anthropic: How Claude's text watermark works</a>, August 14, 2026</li>
+          <li><a href="https://www.techradar.com/ai-platforms-assistants/claude/new-models-will-mark-ai-generated-content-from-day-one-claude-will-now-hide-an-invisible-watermark-inside-ordinary-words-heres-how-thats-even-possible-and-how-eu-rules-could-push-openai-and-google-to-follow-suit">TechRadar: New models will mark AI-generated content from day one</a>, August 12, 2026</li>
+        </ul>
       </article>
     </div>
   </main>

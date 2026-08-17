@@ -18,8 +18,8 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - `pages/account.html`        會員 Profile、方案、週期、用量及登出
 - `auth/callback.html`        Supabase PKCE callback 及 session exchange
 - `pages/what-is-*.html`       解釋型文章（FAQPage 結構）
-- `pages/how-it-works.html`    技術原理（公開部分，標 [待确认]）
-- `pages/changes-2026.html`    近期變化時間線（標 [待确认] + 時效提示）
+- `pages/how-it-works.html`    SynthID-Text 公開原理、限制及官方來源
+- `pages/changes-2026.html`    2026 水印推出時間線、目前狀態及來源
 - `pages/privacy|terms|cookie` 法律頁（合規草稿）
 - `css/style.css`             設計系統 token（IBM Plex / 單藍 accent / 4px 圓角）
 - `js/checker.js`             客戶端啟發式（無 API、無上傳）
@@ -44,13 +44,14 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - AI 單次輸入上限：Free 3,000 字符；Pro 20,000 字符
 - AI 控制：語氣下拉選單、正式程度低／中／高、重寫強度低／中／高；輸出自動保留輸入語言
 
-## 尚待確認
-- Pro 正式價格，以及 Free／Pro 正式月度字符額度
-- 語氣下拉選單的正式 allowlist
-- 文章頁真實來源引用（Help Center / Forbes / Reddit）
-- `/checker` 是否繼續允許搜尋引擎索引（sitemap 目前包含此頁）
-- Privacy、Cookie、Terms 草案的正式法律審核、營運主體名稱、適用州法及爭議處理條款
-- 問問 API 的合約資料保留期；production Secret 已配置，但 Cloudflare Workers 至官方網關的 transport 相容性仍待供應商處理
+## 現行產品設定及已知限制
+- Pro 定價為 `US$9/month`；資料庫現時按帳單週期執行 500,000 個輸入字符上限，Free 每月為 10,000 個輸入字符。
+- 產品已記錄 Pro 每期 200 次改寫的目標，但現行 quota RPC 只執行字符配額，未有獨立 request-count enforcement；正式對外宣傳 200 次前必須先完成資料庫及 API 實作。
+- 語氣 allowlist 為 `neutral`、`professional`、`friendly`、`concise`；正式程度及重寫強度均為 `low`、`medium`、`high`。
+- 三篇水印文章引用 Claude Help Center、Anthropic 2026-08-14 技術文章、SynthID-Text 論文及 TechRadar 具體報道；資料最後檢查日期為 2026-08-17。
+- `/checker` 維持可被搜尋引擎索引，並已明確標示只檢查 Unicode 及表面文字訊號，不是 Anthropic 水印 detector。
+- Privacy、Cookie、Terms 仍是法律審閱草案；營運主體、適用法律、爭議及退款條款不可由工程實作代替法律決定。
+- 問問未公開合約資料保留期，因此法律頁只披露第三方處理，不作未有證據的保留期承諾；Cloudflare workerd transport 已修復並通過 production 重寫。
 
 ## 部署到 Cloudflare Pages
 1. 使用 Node.js 22 安裝依賴：`npm ci`
@@ -174,12 +175,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 關鍵決策和解決方案：Plausible 官方標準腳本不使用 Cookie，因此移除不需要的同意橫幅並同步 Privacy/Cookie 文案；EBond 診斷只記錄安全狀態與模型存在與否，不記錄 Key、輸入、輸出或模型列表。
 - 使用的技術棧：Cloudflare Pages/Workers、原生 HTML/CSS/JavaScript、Hono、Vitest、Supabase Auth/Postgres/RLS、Plausible、EBond API。
 - 新增或修改檔案：修改 Checker、首頁、CSS、Privacy/Cookie、EBond Provider/API/運維手冊與本 README；新增 Checker、分析政策、EBond Secret/連線診斷回歸測試；本機保留完整 QA 報告與 38 張證據截圖。
-- 後續建議：Phase 1/2 與 Phase 3 的認證、冪等、配額釋放均通過；EBond production Key/帳戶對 `/v1/models`、Responses 與 Chat 均未返回上游 HTTP 狀態，需 EBond 檢查該帳戶及 `gpt-5.5` 路由。內容頁的 `[待確認]` 必須取得正式來源、日期與私隱聯絡資料後再移除。
+- 後續建議：Phase 1/2 與 Phase 3 的認證、冪等、配額釋放均通過；EBond production Key/帳戶對 `/v1/models`、Responses 與 Chat 均未返回上游 HTTP 狀態。內容頁來源、日期與私隱聯絡資料其後已於 2026-08-17 完成核對及更新。
 
 ### 2026-08-16：鎖定首發設定並整理法律草案
 - 會話主要目的：記錄已確認的網域、聯絡方式、首發市場、重寫控制及單次字符限制，並將 Privacy、Cookie、Terms 整理為可審閱草案。
 - 完成的主要任務：確認 `watermarklens.com`、`contact@watermarklens.com` 及 US/English 首發；定義語氣、正式程度、重寫強度與自動保留輸入語言的產品要求；擴寫三份英文法律頁並加入回歸測試。
-- 關鍵決策和解決方案：Free／Pro 單次上限鎖定為 3,000／20,000 字符；月度額度、Pro 價格及語氣 allowlist 仍維持待確認；AI 原文和結果預設不落庫，但法律草案不替 EBond 承諾尚未確認的保留期。
+- 關鍵決策和解決方案：Free／Pro 單次上限鎖定為 3,000／20,000 字符；當時未鎖定的月度額度、Pro 價格及語氣 allowlist，其後已記錄為現行設定；AI 原文和結果預設不落庫，法律草案不替供應商承諾未公開的保留期。
 - 使用的技術棧：原生 HTML、Cloudflare Pages、Supabase、EBond AI、Plausible-compatible Analytics、Vitest。
 - 新增或修改檔案：更新 `docs/prd/backend-membership-prd.md`、`pages/privacy.html`、`pages/cookie.html`、`pages/terms.html`、`README.md`；新增 `tests/legal-pages.test.ts`。未建立或提交任何 `.env`、密碼、Token 或 API Key。
 - 後續建議：由美國法律顧問確認營運主體、適用州法、爭議處理、退款及州級私隱披露；在 Phase 4 開發前確認語氣 allowlist，並在付費上線前鎖定正式價格和月度額度。
@@ -301,7 +302,7 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 ### 2026-08-16：實作 Phase 5 Stripe 訂閱帳單
 - 會話主要目的：建立 Stripe Test mode Checkout、Customer Portal、signed Webhook 及會員帳單狀態流程。
 - 完成的主要任務：加入 server-only Pro Price mapping、已驗證 Checkout／Portal API、raw-body Webhook signature、事件冪等及順序保護、Subscription／Usage Period 同步、週期結束取消、固定三日 past-due 寬限、會員帳單操作介面，以及刪除帳戶前先取消仍可收費的 Stripe Subscription。
-- 關鍵決策和解決方案：瀏覽器只可提交空 JSON，不可選擇 Price 或 redirect origin；完整 Webhook payload 不落庫；Stripe identifier 只供 service-role 使用；Checkout、Subscription 及 Invoice 使用獨立事件水位及嚴格 identifier 配對，防止舊 Session／Subscription 覆寫目前帳單；正式價格未確認前不建立 Product／Price 或啟用 production Checkout。
+- 關鍵決策和解決方案：瀏覽器只可提交空 JSON，不可選擇 Price 或 redirect origin；完整 Webhook payload 不落庫；Stripe identifier 只供 service-role 使用；Checkout、Subscription 及 Invoice 使用獨立事件水位及嚴格 identifier 配對，防止舊 Session／Subscription 覆寫目前帳單；價格鎖定前不建立 Product／Price 或啟用 production Checkout，價格其後已確認為 `US$9/month`。
 - 使用的技術棧：Stripe Node SDK、Cloudflare Pages Functions、Supabase Auth/Postgres/RLS、TypeScript、Vitest、Playwright。
 - 新增或修改檔案：新增 `src/billing/`、`src/account/`、Phase 5 migration、API／Provider／資料庫／帳戶刪除測試及 `docs/operations/stripe-phase5.md`；更新會員帳戶頁、重寫 entitlement、Wrangler binding、package 工具鏈及本 README。
 - 驗證結果：`npm run check`（68 passed、18 skipped）、`npm run test:database`（18 passed）、`npm run test:e2e`（5 passed）、Supabase schema lint、`npm audit`、`git diff --check` 及 Secret 掃描均通過；signed fixture 已完整通過 Worker API 至 Supabase，但尚未使用真實 Stripe Test mode credential。
@@ -342,3 +343,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：修改 `src/rewrite/openAiCompatibleProvider.ts`、`tests/rewrite/openAiCompatibleProvider.test.ts`、`docs/operations/rewrite-provider-phase3.md` 及本 README；`.dev.vars` 保持 Git ignored，未提交或記錄任何 API Key、service-role key、JWT、正文或模型輸出。
 - 驗證結果：本機及 production 頁面均顯示 `Rewrite complete.` 並收到 HTTP 200；固定測試請求以 `181` input Token、`18` output Token、`145` micro-USD 及 `78` 字符結算；診斷期間 `5` 次 reserve 對應 `4` 次 release 及 `1` 次 settle，`processing` 為零，成本公式完全吻合。GitHub Actions 全部通過並完成 Cloudflare Pages deployment，自訂網域 health 及 Auth config 亦為 HTTP 200。
 - 後續建議：使用完整評測集進行語義保留人工審查，並持續監察 production `PROVIDER_*` 標準錯誤率；毋須再要求問問排查 Cloudflare 網絡／TLS。
+
+### 2026-08-17：清除內容頁佔位標記並校正水印說明
+- 會話主要目的：替換網站所有內容及產品文件中的編輯佔位文字，並以最新可核對來源修正 Claude 水印說明。
+- 完成的主要任務：重寫 What Is、How It Works 及 What Changed；加入 2026-08-17 review date、2026 推出時間線、目前 detector 狀態、SynthID-Text 原理及具體來源；修正首頁及本機 Checker，避免把 Unicode 或表面寫作訊號描述成 Claude 水印檢測；同步更新 sitemap、Stripe 手冊及 PRD。
+- 關鍵決策和解決方案：以 Claude Help Center 及 Anthropic 2026-08-14 技術文章作主要事實來源，Nature SynthID-Text 論文及 TechRadar 作補充；明確說明官方水印不加入隱藏字符、舊模型仍在 rollout、官方 detection API 尚未公開；法律頁維持草案標示，避免工程團隊虛構營運主體或準據法。
+- 使用的技術棧：原生 HTML／JavaScript、Vitest、Playwright、Cloudflare Pages、Claude Help Center、Anthropic、Nature、TechRadar。
+- 新增或修改檔案：更新首頁、Checker、三篇內容頁、sitemap、README、PRD、Stripe 運維手冊及 Checker 測試；新增 `tests/content-pages.test.ts`，未修改或提交任何 Secret、`.env` 或 `.dev.vars`。
+- 驗證結果：公開內容及產品文件不再包含 editorial placeholder；內容來源、review date、Checker 邊界回歸測試通過；What Changed 在 1440px 及 390px viewport 均無橫向溢出。
+- 後續建議：Anthropic 公開 detection API 或舊模型 rollout 完成後，重新核對三篇文章；法律頁正式化前須由產品負責人提供營運主體及法律決定，並交由美國法律顧問審閱。

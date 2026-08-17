@@ -17,14 +17,14 @@
 
 Checkout、Subscription 及 Invoice 分別保存事件時間水位。Checkout 事件必須匹配目前 Session；Subscription／Invoice 事件必須匹配目前 Subscription ID。若 Subscription 事件早於 Checkout completed 到達，API 會暫時回傳可重試錯誤，待 Checkout 綁定正確 Subscription ID 後再安全處理。
 
-## 尚待產品設定
+## 已確認產品設定
 
-正式 Pro 月費及幣別尚未確認，因此本輪不建立 Stripe Product／Price，亦不啟用 production Checkout。現有資料庫的 `price_cents` 只屬早期 seed，不可用作建立正式 Stripe Price 的授權依據。
+Pro 月費已確認為 `US$9/month`，以 USD 按月收費。資料庫 `price_cents=900` 與產品決定一致；實際收費仍以 Stripe Dashboard 建立並由 server-only `STRIPE_PRO_PRICE_ID` 指向的 Price 為準。
 
-確認價格後，在 Stripe Dashboard **Test mode** 建立：
+在 Stripe Dashboard **Test mode** 建立：
 
 1. Product：`Watermark Lens Pro`
-2. Price：Recurring、Monthly、USD、正式確認的金額
+2. Price：Recurring、Monthly、USD、`US$9.00`
 3. Metadata：`plan_code=pro`
 
 應用程式只接受伺服器端 `STRIPE_PRO_PRICE_ID`，瀏覽器提交的 Price ID 或 redirect URL 會被拒絕。
