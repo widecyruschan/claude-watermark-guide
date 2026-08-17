@@ -70,6 +70,6 @@ REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
 
 程式及 migration 已切換至 `provider='wenwen'`，歷史 `provider='ebond'` 記錄不會被改寫。公開設定統一為 `https://breakout.wenwen-ai.com`、`gpt-5.5` 及 `chat_completions`。
 
-Production 尚須由帳戶擁有者把問問 Token 設為 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`，並先套用最新 Supabase migration。不得把 Token 放入 `wrangler.toml`、`.env`、`.dev.vars`、GitHub Actions log 或瀏覽器程式碼。
+Production 已配置 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`，並已套用最新 Supabase migration。Token 沒有進入 `wrangler.toml`、`.env`、`.dev.vars`、GitHub Actions log 或瀏覽器程式碼。
 
-完成 Secret 與 migration 後，先以 `GET /v1/models` 確認 `gpt-5.5`，再用受控會員執行一次 production `POST /api/v1/rewrite`。只檢查 HTTP 狀態、模型是否存在、Token usage、配額結算及標準錯誤碼，不打印 API Key、會員 JWT、原文或回應內容。
+受控 production 會員請求仍回傳 `PROVIDER_UNAVAILABLE`。已清理的 Cloudflare runtime 診斷顯示 Worker 至問問網關在 transport 層失敗，連 `GET /v1/models` 探測亦未取得 HTTP 狀態；同一官方 endpoint 從本機可正常取得未授權 HTTP 回應。這表示 Supabase migration、Cloudflare Secret 名稱及應用程式 route 已生效，剩餘阻塞位於問問網關與 Cloudflare Workers 的網絡／TLS 相容性。供應商確認正式可用入口前，不得改用未列入官方文件的域名或第三方代理。

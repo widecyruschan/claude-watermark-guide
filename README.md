@@ -50,7 +50,7 @@ Claude 隐形文本水印资讯 / 工具站（ShipSolo 流水线 01–09 产物�
 - 文章頁真實來源引用（Help Center / Forbes / Reddit）
 - `/checker` 是否繼續允許搜尋引擎索引（sitemap 目前包含此頁）
 - Privacy、Cookie、Terms 草案的正式法律審核、營運主體名稱、適用州法及爭議處理條款
-- 問問 API 的合約資料保留期；production `REWRITE_API_KEY` 及完整會員重寫流程仍待驗證
+- 問問 API 的合約資料保留期；production Secret 已配置，但 Cloudflare Workers 至官方網關的 transport 相容性仍待供應商處理
 
 ## 部署到 Cloudflare Pages
 1. 使用 Node.js 22 安裝依賴：`npm ci`
@@ -314,3 +314,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：新增供應商切換 migration；將 EBond adapter／測試／運維文件改為供應商中立命名；更新 API runtime、成本、資料庫整合測試、Wrangler 非敏感變量、Privacy、Terms、PRD 及本 README；未建立、讀取或提交任何 API Key、`.env` 或 `.dev.vars`。
 - 驗證結果：`npm run check`（67 passed、18 skipped）、`npm run test:database`（18 passed）、`npm run test:e2e`（5 passed）、Supabase schema lint、官方 npm registry audit（0 vulnerabilities）、`git diff --check` 及 Secret 掃描均通過。
 - 後續建議：部署前在 production 套用 `20260817010000_switch_rewrite_provider_to_wenwen.sql`，再把問問 Token 設為 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`；部署後以受控會員請求驗證模型、usage、配額結算和錯誤釋放，且不得打印 Token、JWT、原文或輸出。
+
+### 2026-08-17：完成問問 production 配置及聯調
+- 會話主要目的：在 `REWRITE_API_KEY` 加入後完成其餘 production 配置，並驗證完整會員重寫流程。
+- 完成的主要任務：確認 Cloudflare encrypted Secret、GitHub Actions 及 Pages deployment；向 linked production Supabase 套用 `20260817010000_switch_rewrite_provider_to_wenwen.sql`；執行 remote schema lint；重新部署 Pages Functions 以注入新 Secret；驗證 health、Auth config、Pro request limit 及失敗配額釋放流程。
+- 關鍵決策和解決方案：官方文件再次確認 Base URL 為 `https://breakout.wenwen-ai.com`，因此不使用未列入文件的替代域名；production 只保留 `chat_completions`、`gpt-5.5` 及 `provider='wenwen'`。
+- 使用的技術棧：Cloudflare Pages Functions／runtime tail、GitHub Actions、Supabase linked migrations、Chrome production 會員流程、問問 OpenAI-compatible API。
+- 新增或修改檔案：只更新本 README 及 AI 重寫運維狀態；未讀取、顯示、下載或提交任何 API Key、JWT、`.env` 或 `.dev.vars`。
+- 驗證結果：GitHub Actions 成功；Cloudflare production deployment `b0cded6f` 完成；`/api/v1/health` 及 `/api/v1/auth/config` 均為 HTTP 200；production migration 與 schema lint 通過。實際會員重寫仍回傳 `PROVIDER_UNAVAILABLE`，已清理的 runtime 診斷顯示 Worker 至問問網關在 transport 層失敗且未取得 HTTP 狀態；相同官方 `/v1/models` endpoint 從本機可正常取得未授權 HTTP 回應。
+- 後續建議：要求問問供應商確認是否封鎖 Cloudflare Workers egress、是否有海外／serverless 專用正式入口，以及其 TLS／來源網絡要求；取得供應商確認前，不以未公開代理或未列明域名承載會員文字及 API Token。
