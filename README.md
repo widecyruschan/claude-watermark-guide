@@ -66,6 +66,8 @@ npm run dev
 
 Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。API 健康檢查為 `GET /api/v1/health`。
 
+本機 AI 重寫必須在 Git ignored `.dev.vars` 同時配置 `REWRITE_API_KEY`、`REWRITE_API_MODE`、`REWRITE_BASE_URL`、`REWRITE_MODEL`，以及同一 Supabase 環境的 URL、publishable key 和 service-role key。Cloudflare production Secret 不會自動同步至本機；修改後需重新啟動 dev server。完整欄位及安全要求見 `docs/operations/rewrite-provider-phase3.md`。
+
 ## 工程命令
 - `npm run build`：產生扁平化的 `dist/` 靜態資源
 - `npm run dev`：建置並啟動 Pages 本機執行環境
@@ -323,3 +325,11 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：只更新本 README 及 AI 重寫運維狀態；未讀取、顯示、下載或提交任何 API Key、JWT、`.env` 或 `.dev.vars`。
 - 驗證結果：GitHub Actions 成功；Cloudflare production deployment `b0cded6f` 完成；`/api/v1/health` 及 `/api/v1/auth/config` 均為 HTTP 200；production migration 與 schema lint 通過。實際會員重寫仍回傳 `PROVIDER_UNAVAILABLE`，已清理的 runtime 診斷顯示 Worker 至問問網關在 transport 層失敗且未取得 HTTP 狀態；相同官方 `/v1/models` endpoint 從本機可正常取得未授權 HTTP 回應。
 - 後續建議：要求問問供應商確認是否封鎖 Cloudflare Workers egress、是否有海外／serverless 專用正式入口，以及其 TLS／來源網絡要求；取得供應商確認前，不以未公開代理或未列明域名承載會員文字及 API Token。
+
+### 2026-08-17：診斷本機 AI 重寫配置錯誤
+- 會話主要目的：詳細檢查 `http://127.0.0.1:8788/rewrite` 顯示 `The rewrite provider is not configured correctly.` 的原因。
+- 完成的主要任務：確認本機 workerd、health 及 Auth config 正常；只檢查本機變數名稱而不讀取值；確認 `.dev.vars` 原本只有 Supabase 公開配置，缺少所有 `REWRITE_*` 及 server-only service-role binding；補上三項非敏感問問變數。
+- 關鍵決策和解決方案：Cloudflare encrypted Secret 不能被下載或自動同步到本機；本機完整重寫流程必須由使用者在 Git ignored `.dev.vars` 私密加入 `REWRITE_API_KEY` 及與 `SUPABASE_URL` 同環境的 `SUPABASE_SERVICE_ROLE_KEY`，再重啟 dev server。
+- 使用的技術棧：Wrangler Pages dev、Cloudflare Pages Functions、Supabase、問問 Chat Completions、本機 workerd。
+- 新增或修改檔案：更新本機 `.dev.vars` 的非敏感模型設定（Git ignored），並更新 AI 重寫運維手冊及本 README；未讀取、顯示或提交任何 API Key、service-role key、JWT、`.env` 或 `.dev.vars`。
+- 後續建議：不要在聊天或截圖中提供任何 Secret；本機成功後仍需由問問處理 production Cloudflare Workers transport 相容性。

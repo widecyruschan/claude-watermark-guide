@@ -23,12 +23,26 @@ REWRITE_MODEL=gpt-5.5
 SUPABASE_URL=https://PROJECT_REF.supabase.co
 ```
 
-以下值只可使用 Cloudflare Pages production Secret，不得寫入 Git、日誌、`.env` 或 `.dev.vars`：
+Production 的以下值只可使用 Cloudflare Pages encrypted Secret，不得寫入 Git、日誌或明文 Wrangler 變數：
 
 ```text
 REWRITE_API_KEY
 SUPABASE_SERVICE_ROLE_KEY
 ```
+
+本機 `wrangler pages dev` 不會下載或解密 Cloudflare production Secret，也不會自動使用 `[env.production.vars]`。本機聯調必須在已被 Git 忽略的 `.dev.vars` 提供以下完整變數：
+
+```text
+REWRITE_API_KEY=<本機私密輸入>
+REWRITE_API_MODE=chat_completions
+REWRITE_BASE_URL=https://breakout.wenwen-ai.com
+REWRITE_MODEL=gpt-5.5
+SUPABASE_URL=<本機或指定測試 Supabase URL>
+SUPABASE_PUBLISHABLE_KEY=<對應 publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<對應 server-only service-role key>
+```
+
+`SUPABASE_URL`、publishable key 及 service-role key 必須來自同一個 Supabase 環境。修改 `.dev.vars` 後要重新啟動 `npm run dev`。不得把 `.dev.vars`、畫面截圖、終端輸出或其中任何 Secret 提交到 GitHub。
 
 啟動 Provider 前會驗證 `REWRITE_API_KEY` 只包含可安全放入 HTTP Header 的可打印 ASCII 字元。格式錯誤只回傳 `PROVIDER_CONFIGURATION_ERROR`，不會記錄或回傳 Secret 值。
 
