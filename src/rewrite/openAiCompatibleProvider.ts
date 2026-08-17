@@ -83,7 +83,7 @@ export class OpenAiCompatibleProvider {
 
     this.baseUrl = options.baseUrl.replace(/\/+$/u, '');
     this.enableConnectivityProbe = options.enableConnectivityProbe ?? false;
-    this.fetchImplementation = options.fetch ?? fetch;
+    this.fetchImplementation = (options.fetch ?? globalThis.fetch).bind(globalThis);
     this.model = options.model;
     this.retryDelayMs = options.retryDelayMs ?? 250;
     this.timeoutMs = options.timeoutMs ?? 30_000;

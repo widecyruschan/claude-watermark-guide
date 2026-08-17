@@ -86,4 +86,6 @@ REWRITE_EVALUATION_TOKEN="短期測試會員 JWT" npm run evaluate:rewrite
 
 Production 已配置 Cloudflare Pages encrypted Secret `REWRITE_API_KEY`，並已套用最新 Supabase migration。Token 沒有進入 `wrangler.toml`、`.env`、`.dev.vars`、GitHub Actions log 或瀏覽器程式碼。
 
-受控 production 會員請求仍回傳 `PROVIDER_UNAVAILABLE`。已清理的 Cloudflare runtime 診斷顯示 Worker 至問問網關在 transport 層失敗，連 `GET /v1/models` 探測亦未取得 HTTP 狀態；同一官方 endpoint 從本機可正常取得未授權 HTTP 回應。這表示 Supabase migration、Cloudflare Secret 名稱及應用程式 route 已生效，剩餘阻塞位於問問網關與 Cloudflare Workers 的網絡／TLS 相容性。供應商確認正式可用入口前，不得改用未列入官方文件的域名或第三方代理。
+受控 production 會員請求曾回傳 `PROVIDER_UNAVAILABLE`。最終根因並非問問網關或 TLS，而是 Provider 把 workerd 原生 `fetch` 存為 class 欄位後以錯誤 receiver 呼叫，runtime 因此拋出 `Illegal invocation`；Node fetch 對 receiver 較寬鬆，所以早期 Node 直連測試未能重現。Provider 現已把 fetch implementation 綁定到 `globalThis`，並加入 receiver-sensitive 回歸測試。
+
+本機完整會員流程已通過：問問 `chat/completions` 回傳有效文字及 usage，API 回應 HTTP 200，成功請求原子結算 Token／成本／字符；同一輪四個失敗 reservation 全部 release，沒有殘留 `processing`。部署修復版本後，production 仍要以受控會員請求重跑相同 smoke test；不得以未公開域名或第三方代理取代正式 endpoint。

@@ -53,6 +53,39 @@ describe('OpenAI-compatible rewrite provider', () => {
     expect(REWRITE_PROMPT_VERSION).toBe('rewrite-v1.1.0');
   });
 
+  it('calls the runtime fetch implementation with the global receiver', async () => {
+    const receiverSensitiveFetch = vi.fn(function (this: unknown): Promise<Response> {
+      if (this !== globalThis) {
+        throw new TypeError('Illegal invocation: incorrect this reference');
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          choices: [{ message: { content: 'Runtime-compatible response.' } }],
+          usage: { completion_tokens: 5, prompt_tokens: 14 },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', receiverSensitiveFetch);
+
+    try {
+      const provider = new OpenAiCompatibleProvider({
+        apiKey: 'provider-secret',
+        baseUrl: 'https://breakout.wenwen-ai.com',
+        model: 'gpt-5.5',
+        retryDelayMs: 0,
+        timeoutMs: 1_000,
+      });
+
+      await expect(provider.rewrite('Original.')).resolves.toMatchObject({
+        text: 'Runtime-compatible response.',
+      });
+      expect(receiverSensitiveFetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('puts selected rewrite controls into the provider instructions without a language override', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({

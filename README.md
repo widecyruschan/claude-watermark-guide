@@ -333,3 +333,12 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 使用的技術棧：Wrangler Pages dev、Cloudflare Pages Functions、Supabase、問問 Chat Completions、本機 workerd。
 - 新增或修改檔案：更新本機 `.dev.vars` 的非敏感模型設定（Git ignored），並更新 AI 重寫運維手冊及本 README；未讀取、顯示或提交任何 API Key、service-role key、JWT、`.env` 或 `.dev.vars`。
 - 後續建議：不要在聊天或截圖中提供任何 Secret；本機成功後仍需由問問處理 production Cloudflare Workers transport 相容性。
+
+### 2026-08-17：修復 workerd AI 重寫 transport 錯誤
+- 會話主要目的：在本機 Secret 補齊後，詳細重現並修復 `The rewrite provider is unavailable.`，完成真實會員重寫及配額驗證。
+- 完成的主要任務：重新啟動 Wrangler 以載入 `.dev.vars`；驗證 health、Auth config、問問 models 及 Chat Completions；以安全臨時診斷定位 workerd `Illegal invocation`；修正 native fetch receiver；加入回歸測試；驗證成功結算及失敗 reservation release。
+- 關鍵決策和解決方案：Provider 將 runtime fetch 綁定到 `globalThis`，避免以 class instance 作為 native fetch receiver；Node 直連成功不再視為 workerd 相容性證據；早前「問問與 Cloudflare 網絡／TLS 不相容」判斷已由實際錯誤訊號推翻。
+- 使用的技術棧：Cloudflare workerd／Wrangler Pages dev、TypeScript、Vitest、Supabase Postgres、問問 OpenAI-compatible Chat Completions、Chrome 本機會員流程。
+- 新增或修改檔案：修改 `src/rewrite/openAiCompatibleProvider.ts`、`tests/rewrite/openAiCompatibleProvider.test.ts`、`docs/operations/rewrite-provider-phase3.md` 及本 README；`.dev.vars` 保持 Git ignored，未提交或記錄任何 API Key、service-role key、JWT、正文或模型輸出。
+- 驗證結果：頁面顯示 `Rewrite complete.` 並收到 HTTP 200；成功請求以 `181` input Token、`18` output Token、`145` micro-USD 及 `78` 字符結算；同一輪 `5` 次 reserve 對應 `4` 次 release 及 `1` 次 settle，`processing` 為零，成本公式完全吻合。
+- 後續建議：推送修復並等待 Cloudflare production deployment 後，以非敏感短句重跑 production 會員 smoke test，確認自訂網域同樣回傳 HTTP 200。
