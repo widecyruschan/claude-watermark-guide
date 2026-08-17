@@ -388,3 +388,11 @@ Wrangler 預設在 `http://localhost:8788` 啟動靜態站與 Pages Functions。
 - 新增或修改檔案：更新 `src/client/auth.ts`、首頁、404、Checker、三篇內容頁、三篇法律頁、auth source tests、Playwright regression 及本 README；未讀取、輸出或提交任何真實 session、JWT、Cookie、API Key、`.env` 或 `.dev.vars`。
 - 驗證結果：新增回歸測試先重現 `Sign in` 可見，再修復至通過；`npm run check` 通過（81 passed、18 skipped），`npm run test:e2e` 通過（10 passed），110 檔 Secret scan 及全路由 smoke 通過。
 - 後續建議：部署後以同一已登入 browser session 驗證 Account → Home → Checker → Privacy 仍顯示 Account menu，並確認公開頁 Sign out 後恢復 Sign in。
+
+### 2026-08-17：全站安裝 Cookiebot
+- 會話主要目的：按 Cookiebot 提供嘅安裝代碼，喺網站每個頁面嘅 `<head>` 載入 consent management script。
+- 完成的主要任務：將指定 Cookiebot `uc.js` snippet 加入首頁、404、內容頁、法律頁、會員頁及 OAuth callback，共 13 個源 HTML 頁面；加入全頁覆蓋及單次載入回歸測試。
+- 關鍵決策和解決方案：Cookiebot 放喺每個 `<head>` 開始位置並早於 GA4；OAuth callback 繼續排除 GA4／Plausible，但按明確要求載入 Cookiebot；建置流程由源 HTML 自動產生 `dist/`，唔手動維護部署產物。
+- 使用的技術棧：原生 HTML、Cookiebot CMP、Vitest、Cloudflare Pages。
+- 新增或修改檔案：更新 13 個 HTML 源頁面、analytics policy 回歸測試及本 README；未修改或提交任何密碼、API Key、`.env` 或 `.dev.vars`。
+- 後續建議：部署後喺 Cookiebot Dashboard 確認 `watermarklens.com` 掃描完成，並以 browser 驗證 consent banner、偏好更新及 GA4 consent 行為。
